@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { LogOut, Plus, Calendar, Clock, Users, CalendarCheck, Loader2 } from 'lucide-react';
+import { LogOut, Plus, Calendar, Clock, Users, CalendarCheck, Loader2, TrendingUp } from 'lucide-react';
 import { LionLogo } from './LionLogo';
 import { Calendar as CalendarComponent } from './Calendar';
 import { MeetingModal } from './MeetingModal';
@@ -166,22 +166,28 @@ export const Dashboard: React.FC = () => {
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
             {/* Header */}
-            <header className="sticky top-0 z-40 glass-dark border-b border-slate-800">
+            <header className="sticky top-0 z-40 glass-dark">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-3">
-                            <LionLogo size={32} className="text-amber-500" />
-                            <span className="text-lg font-semibold text-amber-500 hidden sm:inline">
+                            <LionLogo size={32} className="text-amber-500 animate-breathe" />
+                            <span className="text-lg font-semibold text-gradient-gold hidden sm:inline">
                                 Valento Academy
                             </span>
                         </div>
 
                         {/* User info e logout */}
                         <div className="flex items-center gap-4">
-                            <span className="text-slate-300 text-sm hidden sm:inline">
-                                {user?.user_metadata.full_name || user?.email}
-                            </span>
+                            {/* Avatar with initials */}
+                            <div className="flex items-center gap-3">
+                                <div className="avatar-initials w-8 h-8 rounded-full text-xs hidden sm:flex">
+                                    {(user?.user_metadata.full_name || user?.email || 'U').slice(0, 2).toUpperCase()}
+                                </div>
+                                <span className="text-slate-300 text-sm hidden sm:inline">
+                                    {user?.user_metadata.full_name || user?.email}
+                                </span>
+                            </div>
                             <button
                                 onClick={handleLogout}
                                 disabled={loggingOut}
@@ -197,6 +203,8 @@ export const Dashboard: React.FC = () => {
                         </div>
                     </div>
                 </div>
+                {/* Golden decorative line */}
+                <div className="line-gradient-gold" />
             </header>
 
             {/* Main content */}
@@ -205,34 +213,45 @@ export const Dashboard: React.FC = () => {
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
                     {/* Total de reuniões */}
                     <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Calendar className="w-5 h-5 text-amber-500" />
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="icon-circle">
+                                <Calendar className="w-5 h-5 text-amber-500" />
+                            </div>
                             <span className="text-slate-400 text-sm">Total</span>
                         </div>
                         {loading ? (
                             <div className="h-8 w-16 skeleton rounded" />
                         ) : (
-                            <p className="text-2xl sm:text-3xl font-bold text-white">{meetings.length}</p>
+                            <div className="flex items-end gap-2">
+                                <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{meetings.length}</p>
+                                <span className="text-xs text-emerald-400 flex items-center gap-0.5 mb-1">
+                                    <TrendingUp className="w-3 h-3" />
+                                </span>
+                            </div>
                         )}
                     </div>
 
                     {/* Reuniões hoje */}
                     <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Clock className="w-5 h-5 text-amber-500" />
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="icon-circle">
+                                <Clock className="w-5 h-5 text-amber-500" />
+                            </div>
                             <span className="text-slate-400 text-sm">Hoje</span>
                         </div>
                         {loading ? (
                             <div className="h-8 w-16 skeleton rounded" />
                         ) : (
-                            <p className="text-2xl sm:text-3xl font-bold text-white">{todayCount}</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{todayCount}</p>
                         )}
                     </div>
 
                     {/* Próxima reunião */}
                     <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-2">
-                            <CalendarCheck className="w-5 h-5 text-amber-500" />
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="icon-circle">
+                                <CalendarCheck className="w-5 h-5 text-amber-500" />
+                            </div>
                             <span className="text-slate-400 text-sm">Próxima</span>
                         </div>
                         {loading ? (
@@ -251,14 +270,16 @@ export const Dashboard: React.FC = () => {
 
                     {/* Participantes únicos */}
                     <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-2">
-                            <Users className="w-5 h-5 text-amber-500" />
+                        <div className="flex items-center gap-3 mb-3">
+                            <div className="icon-circle">
+                                <Users className="w-5 h-5 text-amber-500" />
+                            </div>
                             <span className="text-slate-400 text-sm">Participantes</span>
                         </div>
                         {loading ? (
                             <div className="h-8 w-16 skeleton rounded" />
                         ) : (
-                            <p className="text-2xl sm:text-3xl font-bold text-white">{uniqueParticipants}</p>
+                            <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{uniqueParticipants}</p>
                         )}
                     </div>
                 </div>
@@ -340,17 +361,20 @@ export const Dashboard: React.FC = () => {
             </main>
 
             {/* FAB - Botão de criar reunião */}
-            <button
-                onClick={() => {
-                    setEditingMeeting(null);
-                    setPrefilledDate(null);
-                    setPrefilledTime(null);
-                    setShowMeetingModal(true);
-                }}
-                className="fixed bottom-6 right-6 w-14 h-14 bg-amber-500 rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:bg-amber-400 hover:scale-110 transition-all z-30"
-            >
-                <Plus className="w-6 h-6 text-slate-900" />
-            </button>
+            <div className="fab-container fixed bottom-6 right-6 z-30">
+                <button
+                    onClick={() => {
+                        setEditingMeeting(null);
+                        setPrefilledDate(null);
+                        setPrefilledTime(null);
+                        setShowMeetingModal(true);
+                    }}
+                    className="relative w-14 h-14 bg-amber-500 rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:bg-amber-400 hover:scale-110 transition-all fab-ring group"
+                >
+                    <Plus className="w-6 h-6 text-slate-900 transition-transform group-hover:rotate-90" />
+                </button>
+                <span className="fab-tooltip">Nova Reunião</span>
+            </div>
 
             {/* Modais */}
             <MeetingModal

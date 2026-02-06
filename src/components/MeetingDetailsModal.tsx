@@ -62,11 +62,14 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
 
             {/* Modal */}
             <div className="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden animate-scaleIn">
+                {/* Decorative gradient line at top */}
+                <div className="modal-header-line" />
+
                 {/* Header */}
                 <div className="flex items-start justify-between p-6 border-b border-slate-700">
                     <div className="flex-1 pr-4">
-                        <h2 className="text-xl font-bold text-white mb-2">{meeting.title}</h2>
-                        {getStatusBadge()}
+                        <div className="mb-3">{getStatusBadge()}</div>
+                        <h2 className="text-xl font-bold text-white line-clamp-2">{meeting.title}</h2>
                     </div>
                     <button
                         onClick={onClose}
@@ -100,16 +103,18 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
 
                     {/* Participantes */}
                     <div>
-                        <h3 className="text-sm font-medium text-slate-400 mb-2">
+                        <h3 className="text-sm font-medium text-amber-500 mb-3">
                             Participantes ({meeting.participants.length})
                         </h3>
                         <div className="flex flex-wrap gap-2">
                             {meeting.participants.map((email) => (
                                 <div
                                     key={email}
-                                    className="flex items-center gap-2 bg-slate-900/50 px-3 py-1.5 rounded-full text-sm"
+                                    className="flex items-center gap-2 bg-slate-900/50 px-3 py-2 rounded-full text-sm"
                                 >
-                                    <Mail className="w-3.5 h-3.5 text-slate-400" />
+                                    <div className="avatar-initials w-6 h-6 rounded-full text-[10px]">
+                                        {email.slice(0, 2).toUpperCase()}
+                                    </div>
                                     <span className="text-slate-300">{email}</span>
                                 </div>
                             ))}

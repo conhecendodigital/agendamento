@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import { ChevronLeft, ChevronRight, Calendar as CalendarIcon } from 'lucide-react';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import type { Meeting } from '../config/supabase';
 import {
     monthNames,
@@ -181,18 +181,24 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                             const isCurrentMonth = date.getMonth() === currentMonth;
                             const isTodayDate = isToday(date);
 
+                            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
+
                             return (
                                 <div
                                     key={index}
                                     onClick={() => onDateSelect(date)}
-                                    className={`min-h-[80px] sm:min-h-[100px] p-1 sm:p-2 rounded-lg cursor-pointer transition-all ${isCurrentMonth ? 'bg-slate-800/30' : 'bg-slate-900/30'
-                                        } hover:bg-slate-700/40 border border-transparent hover:border-slate-600/50`}
+                                    className={`min-h-[80px] sm:min-h-[100px] p-1 sm:p-2 rounded-lg cursor-pointer transition-all border border-transparent hover:border-slate-600/50 ${isCurrentMonth
+                                        ? isWeekend
+                                            ? 'calendar-cell-weekend'
+                                            : 'bg-slate-800/30 hover:bg-slate-700/40'
+                                        : 'bg-slate-900/30 hover:bg-slate-800/40'
+                                        }`}
                                 >
                                     {/* Número do dia */}
                                     <div className="flex justify-between items-start mb-1">
                                         <span
-                                            className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full text-xs sm:text-sm ${isTodayDate
-                                                ? 'bg-amber-500 text-slate-900 font-bold'
+                                            className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full text-xs sm:text-sm transition-all ${isTodayDate
+                                                ? 'bg-amber-500 text-slate-900 font-bold glow-amber-strong'
                                                 : isCurrentMonth
                                                     ? 'text-white'
                                                     : 'text-slate-600'
@@ -216,9 +222,11 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                                                     e.stopPropagation();
                                                     onMeetingClick(meeting);
                                                 }}
-                                                className={`text-xs px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 ${getStatusColor(meeting.status)}`}
+                                                className={`text-xs px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-all hover:scale-[1.02] ${getStatusColor(meeting.status)} ${meeting.status === 'cancelled' ? 'meeting-cancelled' : ''}`}
                                             >
-                                                {formatTime(meeting.start_time)} {meeting.title}
+                                                <span className={meeting.status === 'cancelled' ? 'meeting-title' : ''}>
+                                                    {formatTime(meeting.start_time)} {meeting.title}
+                                                </span>
                                             </div>
                                         ))}
                                     </div>

@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Loader2, Eye, EyeOff } from 'lucide-react';
+import { Mail, Lock, User, Loader2, ArrowRight } from 'lucide-react';
 import { LionLogo } from './LionLogo';
 import { useToast } from './Toast';
 import { useAuth } from '../hooks/useAuth';
@@ -23,7 +23,6 @@ export const Login: React.FC = () => {
     });
     const [errors, setErrors] = useState<Partial<FormData>>({});
     const [loading, setLoading] = useState(false);
-    const [showPassword, setShowPassword] = useState(false);
 
     const { signIn, signUp } = useAuth();
     const { showToast } = useToast();
@@ -31,29 +30,24 @@ export const Login: React.FC = () => {
     const validateForm = (): boolean => {
         const newErrors: Partial<FormData> = {};
 
-        // Validar email
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!formData.email) {
             newErrors.email = 'Email é obrigatório';
-        } else if (!emailRegex.test(formData.email)) {
+        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
             newErrors.email = 'Email inválido';
         }
 
-        // Validar senha
         if (!formData.password) {
             newErrors.password = 'Senha é obrigatória';
         } else if (formData.password.length < 6) {
-            newErrors.password = 'Senha deve ter no mínimo 6 caracteres';
+            newErrors.password = 'Mínimo 6 caracteres';
         }
 
-        // Validações de registro
         if (mode === 'register') {
-            if (!formData.fullName.trim()) {
+            if (!formData.fullName) {
                 newErrors.fullName = 'Nome é obrigatório';
             }
-
             if (formData.password !== formData.confirmPassword) {
-                newErrors.confirmPassword = 'As senhas não coincidem';
+                newErrors.confirmPassword = 'Senhas não conferem';
             }
         }
 
@@ -63,7 +57,6 @@ export const Login: React.FC = () => {
 
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
         if (!validateForm()) return;
 
         setLoading(true);
@@ -74,22 +67,11 @@ export const Login: React.FC = () => {
                 showToast('success', 'Login realizado com sucesso!');
             } else {
                 await signUp(formData.email, formData.password, formData.fullName);
-                showToast('success', 'Conta criada! Verifique seu email para confirmar o cadastro.');
+                showToast('success', 'Conta criada! Verifique seu email para confirmar.');
             }
         } catch (error) {
-            const message = error instanceof Error ? error.message : 'Erro desconhecido';
-
-            // Traduzir mensagens comuns do Supabase
-            let translatedMessage = message;
-            if (message.includes('Invalid login credentials')) {
-                translatedMessage = 'Email ou senha incorretos';
-            } else if (message.includes('User already registered')) {
-                translatedMessage = 'Este email já está cadastrado';
-            } else if (message.includes('Email not confirmed')) {
-                translatedMessage = 'Confirme seu email antes de fazer login';
-            }
-
-            showToast('error', translatedMessage);
+            const message = error instanceof Error ? error.message : 'Erro ao processar';
+            showToast('error', message);
         } finally {
             setLoading(false);
         }
@@ -97,199 +79,211 @@ export const Login: React.FC = () => {
 
     const handleInputChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-        // Limpar erro do campo ao digitar
         if (errors[field]) {
             setErrors((prev) => ({ ...prev, [field]: undefined }));
         }
     };
 
-    const toggleMode = () => {
-        setMode((prev) => (prev === 'login' ? 'register' : 'login'));
+    const switchMode = (newMode: AuthMode) => {
+        setMode(newMode);
         setErrors({});
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
-            {/* Background decoration */}
+        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
+            {/* Background with radial gradient */}
+            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+
+            {/* Grid pattern overlay */}
+            <div className="absolute inset-0 bg-grid-pattern opacity-50" />
+
+            {/* Radial glow behind card */}
+            <div className="absolute inset-0 bg-radial-glow" />
+
+            {/* Floating particles effect */}
             <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute -top-40 -right-40 w-80 h-80 bg-amber-500/10 rounded-full blur-3xl" />
-                <div className="absolute -bottom-40 -left-40 w-80 h-80 bg-amber-500/5 rounded-full blur-3xl" />
+                <div className="absolute w-1 h-1 bg-amber-500/40 rounded-full top-1/4 left-1/4 animate-pulse" style={{ animationDelay: '0s' }} />
+                <div className="absolute w-1.5 h-1.5 bg-amber-500/30 rounded-full top-1/3 right-1/3 animate-pulse" style={{ animationDelay: '0.5s' }} />
+                <div className="absolute w-1 h-1 bg-amber-500/50 rounded-full bottom-1/4 left-1/3 animate-pulse" style={{ animationDelay: '1s' }} />
+                <div className="absolute w-2 h-2 bg-amber-500/20 rounded-full top-1/2 right-1/4 animate-pulse" style={{ animationDelay: '1.5s' }} />
+                <div className="absolute w-1 h-1 bg-amber-500/40 rounded-full bottom-1/3 right-1/2 animate-pulse" style={{ animationDelay: '2s' }} />
             </div>
 
-            <div className="relative w-full max-w-md">
-                {/* Card */}
-                <div className="glass rounded-2xl p-8 shadow-2xl animate-scaleIn">
-                    {/* Logo e título */}
-                    <div className="flex flex-col items-center mb-8">
-                        <LionLogo size={80} className="text-amber-500 mb-4" />
-                        <h1 className="text-2xl font-bold text-amber-500 tracking-tight">
+            {/* Login Card */}
+            <div className="relative w-full max-w-md animate-fadeInUp">
+                {/* Card glow effect */}
+                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 rounded-3xl blur-xl opacity-50" />
+
+                <div className="relative glass-strong rounded-3xl p-8 sm:p-10">
+                    {/* Top decorative line */}
+                    <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
+
+                    {/* Logo and Title */}
+                    <div className="text-center mb-8">
+                        <div className="inline-block mb-4 group">
+                            <div className="relative">
+                                <LionLogo
+                                    size={72}
+                                    className="text-amber-500 mx-auto animate-breathe transition-all duration-500 group-hover:drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]"
+                                />
+                                {/* Glow ring on hover */}
+                                <div className="absolute inset-0 rounded-full bg-amber-500/10 scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
+                            </div>
+                        </div>
+                        <h1 className="text-3xl font-bold text-gradient-gold mb-2 tracking-tight">
                             Valento Academy
                         </h1>
-                        <p className="text-slate-400 text-sm mt-1">
-                            Gerencie seus agendamentos
+                        <p className="text-slate-400 text-sm tracking-widest uppercase">
+                            Sistema de Agendamentos
                         </p>
                     </div>
 
                     {/* Tabs */}
-                    <div className="flex mb-6 bg-slate-800/50 rounded-lg p-1">
+                    <div className="flex mb-8 relative">
+                        <div className="absolute bottom-0 left-0 right-0 h-px bg-slate-700/50" />
                         <button
                             type="button"
-                            onClick={() => setMode('login')}
-                            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'login'
-                                    ? 'bg-amber-500 text-slate-900'
-                                    : 'text-slate-400 hover:text-white'
+                            onClick={() => switchMode('login')}
+                            className={`flex-1 py-3 text-sm font-medium transition-all relative ${mode === 'login'
+                                ? 'text-amber-500'
+                                : 'text-slate-400 hover:text-slate-300'
                                 }`}
                         >
                             Entrar
+                            {mode === 'login' && (
+                                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full" />
+                            )}
                         </button>
                         <button
                             type="button"
-                            onClick={() => setMode('register')}
-                            className={`flex-1 py-2 px-4 rounded-md text-sm font-medium transition-all ${mode === 'register'
-                                    ? 'bg-amber-500 text-slate-900'
-                                    : 'text-slate-400 hover:text-white'
+                            onClick={() => switchMode('register')}
+                            className={`flex-1 py-3 text-sm font-medium transition-all relative ${mode === 'register'
+                                ? 'text-amber-500'
+                                : 'text-slate-400 hover:text-slate-300'
                                 }`}
                         >
                             Cadastrar
+                            {mode === 'register' && (
+                                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full" />
+                            )}
                         </button>
                     </div>
 
-                    {/* Formulário */}
-                    <form onSubmit={handleSubmit} className="space-y-4">
-                        {/* Nome (apenas no registro) */}
+                    {/* Form */}
+                    <form onSubmit={handleSubmit} className="space-y-5">
                         {mode === 'register' && (
-                            <div>
-                                <label htmlFor="fullName" className="block text-sm font-medium text-slate-300 mb-1.5">
+                            <div className="animate-fadeIn">
+                                <label htmlFor="fullName" className="block text-sm font-medium text-amber-500/80 mb-1.5">
                                     Nome completo
                                 </label>
-                                <div className="relative">
-                                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <div className="relative group">
+                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
                                     <input
                                         type="text"
                                         id="fullName"
                                         value={formData.fullName}
                                         onChange={handleInputChange('fullName')}
                                         placeholder="Seu nome"
-                                        className={`w-full bg-slate-800/50 border rounded-lg py-3 pl-11 pr-4 text-white placeholder-slate-500 transition-all ${errors.fullName ? 'border-red-500' : 'border-slate-700 focus:border-amber-500'
+                                        className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.fullName ? 'border-red-500/50' : ''
                                             }`}
                                     />
                                 </div>
                                 {errors.fullName && (
-                                    <p className="text-red-400 text-xs mt-1">{errors.fullName}</p>
+                                    <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.fullName}</p>
                                 )}
                             </div>
                         )}
 
-                        {/* Email */}
                         <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-slate-300 mb-1.5">
+                            <label htmlFor="email" className="block text-sm font-medium text-amber-500/80 mb-1.5">
                                 Email
                             </label>
-                            <div className="relative">
-                                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <div className="relative group">
+                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
                                 <input
                                     type="email"
                                     id="email"
                                     value={formData.email}
                                     onChange={handleInputChange('email')}
                                     placeholder="seu@email.com"
-                                    className={`w-full bg-slate-800/50 border rounded-lg py-3 pl-11 pr-4 text-white placeholder-slate-500 transition-all ${errors.email ? 'border-red-500' : 'border-slate-700 focus:border-amber-500'
+                                    className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.email ? 'border-red-500/50' : ''
                                         }`}
                                 />
                             </div>
                             {errors.email && (
-                                <p className="text-red-400 text-xs mt-1">{errors.email}</p>
+                                <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.email}</p>
                             )}
                         </div>
 
-                        {/* Senha */}
                         <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-slate-300 mb-1.5">
+                            <label htmlFor="password" className="block text-sm font-medium text-amber-500/80 mb-1.5">
                                 Senha
                             </label>
-                            <div className="relative">
-                                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                            <div className="relative group">
+                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
                                 <input
-                                    type={showPassword ? 'text' : 'password'}
+                                    type="password"
                                     id="password"
                                     value={formData.password}
                                     onChange={handleInputChange('password')}
                                     placeholder="••••••••"
-                                    className={`w-full bg-slate-800/50 border rounded-lg py-3 pl-11 pr-11 text-white placeholder-slate-500 transition-all ${errors.password ? 'border-red-500' : 'border-slate-700 focus:border-amber-500'
+                                    className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.password ? 'border-red-500/50' : ''
                                         }`}
                                 />
-                                <button
-                                    type="button"
-                                    onClick={() => setShowPassword(!showPassword)}
-                                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300"
-                                >
-                                    {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
-                                </button>
                             </div>
                             {errors.password && (
-                                <p className="text-red-400 text-xs mt-1">{errors.password}</p>
+                                <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.password}</p>
                             )}
                         </div>
 
-                        {/* Confirmar senha (apenas no registro) */}
                         {mode === 'register' && (
-                            <div>
-                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-slate-300 mb-1.5">
+                            <div className="animate-fadeIn">
+                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-amber-500/80 mb-1.5">
                                     Confirmar senha
                                 </label>
-                                <div className="relative">
-                                    <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+                                <div className="relative group">
+                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
                                     <input
-                                        type={showPassword ? 'text' : 'password'}
+                                        type="password"
                                         id="confirmPassword"
                                         value={formData.confirmPassword}
                                         onChange={handleInputChange('confirmPassword')}
                                         placeholder="••••••••"
-                                        className={`w-full bg-slate-800/50 border rounded-lg py-3 pl-11 pr-4 text-white placeholder-slate-500 transition-all ${errors.confirmPassword ? 'border-red-500' : 'border-slate-700 focus:border-amber-500'
+                                        className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.confirmPassword ? 'border-red-500/50' : ''
                                             }`}
                                     />
                                 </div>
                                 {errors.confirmPassword && (
-                                    <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>
+                                    <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.confirmPassword}</p>
                                 )}
                             </div>
                         )}
 
-                        {/* Botão de submit */}
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full btn-primary py-3 rounded-lg text-slate-900 font-semibold flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full btn-primary py-4 rounded-xl text-slate-900 font-bold text-sm tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-8"
                         >
                             {loading ? (
                                 <>
                                     <Loader2 className="w-5 h-5 animate-spin" />
-                                    {mode === 'login' ? 'Entrando...' : 'Criando conta...'}
+                                    Processando...
                                 </>
                             ) : (
-                                mode === 'login' ? 'Entrar' : 'Criar conta'
+                                <>
+                                    {mode === 'login' ? 'Entrar' : 'Criar conta'}
+                                    <ArrowRight className="w-5 h-5" />
+                                </>
                             )}
                         </button>
                     </form>
 
-                    {/* Link alternativo */}
-                    <p className="text-center text-slate-400 text-sm mt-6">
-                        {mode === 'login' ? (
-                            <>
-                                Não tem uma conta?{' '}
-                                <button onClick={toggleMode} className="text-amber-500 hover:underline font-medium">
-                                    Cadastre-se
-                                </button>
-                            </>
-                        ) : (
-                            <>
-                                Já tem uma conta?{' '}
-                                <button onClick={toggleMode} className="text-amber-500 hover:underline font-medium">
-                                    Entrar
-                                </button>
-                            </>
-                        )}
-                    </p>
+                    {/* Bottom decorative element */}
+                    <div className="mt-8 text-center">
+                        <p className="text-slate-500 text-xs">
+                            © {new Date().getFullYear()} Valento Academy
+                        </p>
+                    </div>
                 </div>
             </div>
         </div>

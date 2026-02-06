@@ -1,195 +1,721 @@
 @import "tailwindcss";
 
-/* Custom Valento Academy Theme */
+/* ========================================
+   VALENTO ACADEMY — PREMIUM THEME
+   ======================================== */
+
+/* CSS Custom Properties */
 :root {
   --color-amber-400: #fbbf24;
   --color-amber-500: #f59e0b;
   --color-amber-600: #d97706;
-  --color-slate-300: #cbd5e1;
-  --color-slate-400: #94a3b8;
-  --color-slate-600: #475569;
-  --color-slate-700: #334155;
-  --color-slate-800: #1e293b;
   --color-slate-900: #0f172a;
-  --color-slate-950: #020617;
-  --color-emerald-500: #10b981;
-  --color-red-400: #f87171;
-  --color-red-500: #ef4444;
+  --color-slate-800: #1e293b;
+  --color-slate-700: #334155;
+  --glow-amber: rgba(245, 158, 11, 0.15);
+  --glow-amber-strong: rgba(245, 158, 11, 0.4);
 }
 
+/* Base Styles */
 * {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
 }
 
-html, body, #root {
-  height: 100%;
-  width: 100%;
+html {
+  scroll-behavior: smooth;
 }
 
 body {
-  font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
-  background: linear-gradient(135deg, #020617 0%, #0f172a 50%, #1e293b 100%);
-  color: #f8fafc;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  min-height: 100vh;
+  color: #e2e8f0;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* Scrollbar styling */
-::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+/* ========================================
+   GRADIENT TEXT UTILITIES
+   ======================================== */
+
+.text-gradient-gold {
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-::-webkit-scrollbar-track {
-  background: #1e293b;
+.text-gradient-gold-subtle {
+  background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 50%, #f59e0b 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
 }
 
-::-webkit-scrollbar-thumb {
-  background: #475569;
-  border-radius: 4px;
-}
+/* ========================================
+   GLASSMORPHISM
+   ======================================== */
 
-::-webkit-scrollbar-thumb:hover {
-  background: #64748b;
-}
-
-/* Focus ring */
-*:focus {
-  outline: none;
-}
-
-*:focus-visible {
-  outline: 2px solid #f59e0b;
-  outline-offset: 2px;
-}
-
-/* Glassmorphism utility */
 .glass {
-  background: rgba(30, 41, 59, 0.6);
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  background: rgba(30, 41, 59, 0.5);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border: 1px solid rgba(245, 158, 11, 0.08);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+  transition: all 0.3s ease;
+}
+
+.glass:hover {
+  border-color: rgba(245, 158, 11, 0.15);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(245, 158, 11, 0.05);
 }
 
 .glass-dark {
   background: rgba(15, 23, 42, 0.8);
   backdrop-filter: blur(24px);
   -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(51, 65, 85, 0.5);
+  border-bottom: 1px solid rgba(245, 158, 11, 0.1);
 }
 
-/* Button gradient */
+.glass-strong {
+  background: rgba(30, 41, 59, 0.7);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border: 1px solid rgba(245, 158, 11, 0.12);
+  box-shadow:
+    0 0 80px rgba(245, 158, 11, 0.05),
+    0 25px 50px -12px rgba(0, 0, 0, 0.5);
+}
+
+/* ========================================
+   GLOW EFFECTS
+   ======================================== */
+
+.glow-amber {
+  box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05);
+}
+
+.glow-amber-strong {
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.15);
+}
+
+.glow-amber-border {
+  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 0 20px rgba(245, 158, 11, 0.1);
+}
+
+/* ========================================
+   BUTTONS
+   ======================================== */
+
 .btn-primary {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
+  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
+  background-size: 200% auto;
+  color: #0f172a;
+  font-weight: 700;
   transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-primary::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg,
+      transparent,
+      rgba(255, 255, 255, 0.3),
+      transparent);
+  transition: left 0.5s ease;
 }
 
 .btn-primary:hover {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%);
+  background-position: right center;
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.4), 0 10px 40px rgba(245, 158, 11, 0.2);
   transform: translateY(-1px);
-  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.3);
+}
+
+.btn-primary:hover::before {
+  left: 100%;
 }
 
 .btn-primary:active {
   transform: translateY(0);
 }
 
-/* Card hover effect */
+/* ========================================
+   CARD STYLES
+   ======================================== */
+
 .card-hover {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .card-hover:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.4);
+  border-color: rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 30px rgba(245, 158, 11, 0.08), 0 20px 40px rgba(0, 0, 0, 0.3);
 }
 
-/* Animation keyframes */
+/* ========================================
+   INPUT STYLES
+   ======================================== */
+
+.input-premium {
+  background: rgba(15, 23, 42, 0.7);
+  border: 1px solid rgba(51, 65, 85, 0.5);
+  transition: all 0.3s ease;
+}
+
+.input-premium:focus {
+  border-color: rgba(245, 158, 11, 0.5);
+  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1), 0 0 20px rgba(245, 158, 11, 0.05);
+  outline: none;
+}
+
+.input-premium::placeholder {
+  color: rgba(148, 163, 184, 0.6);
+}
+
+/* ========================================
+   ANIMATIONS — KEYFRAMES
+   ======================================== */
+
 @keyframes fadeIn {
   from {
     opacity: 0;
   }
+
   to {
     opacity: 1;
   }
 }
 
-@keyframes slideUp {
+@keyframes fadeInUp {
   from {
     opacity: 0;
-    transform: translateY(10px);
+    transform: translateY(20px);
   }
+
   to {
     opacity: 1;
     transform: translateY(0);
   }
 }
 
-@keyframes slideIn {
-  from {
-    opacity: 0;
-    transform: translateX(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
 @keyframes scaleIn {
   from {
     opacity: 0;
-    transform: scale(0.95);
+    transform: scale(0.9);
   }
+
   to {
     opacity: 1;
     transform: scale(1);
   }
 }
 
-@keyframes pulse {
-  0%, 100% {
-    opacity: 1;
+@keyframes slideInRight {
+  from {
+    opacity: 0;
+    transform: translateX(100px);
   }
-  50% {
-    opacity: 0.5;
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
+
+@keyframes slideOutUp {
+  from {
+    opacity: 1;
+    transform: translateY(0);
+  }
+
+  to {
+    opacity: 0;
+    transform: translateY(-20px);
+  }
+}
+
+@keyframes shimmer {
+  0% {
+    background-position: -200% center;
+  }
+
+  100% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes pulse-ring {
+  0% {
+    transform: scale(1);
+    opacity: 0.6;
+  }
+
+  100% {
+    transform: scale(1.8);
+    opacity: 0;
+  }
+}
+
+@keyframes pulse-glow {
+
+  0%,
+  100% {
+    box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
+  }
+
+  50% {
+    box-shadow: 0 0 24px rgba(245, 158, 11, 0.5);
+  }
+}
+
+@keyframes breathe {
+
+  0%,
+  100% {
+    transform: scale(1);
+  }
+
+  50% {
+    transform: scale(1.02);
+  }
+}
+
+@keyframes float-particle {
+
+  0%,
+  100% {
+    transform: translateY(0) translateX(0);
+    opacity: 0;
+  }
+
+  10% {
+    opacity: 0.6;
+  }
+
+  90% {
+    opacity: 0.6;
+  }
+
+  50% {
+    transform: translateY(-100px) translateX(20px);
+  }
+}
+
+@keyframes border-glow {
+
+  0%,
+  100% {
+    border-color: rgba(245, 158, 11, 0.2);
+  }
+
+  50% {
+    border-color: rgba(245, 158, 11, 0.5);
+  }
+}
+
+@keyframes progress-countdown {
+  from {
+    width: 100%;
+  }
+
+  to {
+    width: 0%;
+  }
+}
+
+@keyframes slideIndicator {
+  from {
+    transform: translateX(var(--from-x, 0));
+  }
+
+  to {
+    transform: translateX(var(--to-x, 0));
+  }
+}
+
+/* ========================================
+   ANIMATION CLASSES
+   ======================================== */
 
 .animate-fadeIn {
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.4s ease-out;
 }
 
-.animate-slideUp {
-  animation: slideUp 0.3s ease-out;
-}
-
-.animate-slideIn {
-  animation: slideIn 0.3s ease-out;
+.animate-fadeInUp {
+  animation: fadeInUp 0.5s ease-out;
 }
 
 .animate-scaleIn {
-  animation: scaleIn 0.2s ease-out;
+  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
 }
 
-.animate-pulse {
-  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+.animate-slideInRight {
+  animation: slideInRight 0.4s ease-out;
 }
 
-/* Skeleton loading */
+.animate-slideOutUp {
+  animation: slideOutUp 0.3s ease-out forwards;
+}
+
+.animate-breathe {
+  animation: breathe 3s ease-in-out infinite;
+}
+
+.animate-pulse-glow {
+  animation: pulse-glow 2s ease-in-out infinite;
+}
+
+/* ========================================
+   BACKGROUND PATTERNS
+   ======================================== */
+
+.bg-grid-pattern {
+  background-image:
+    linear-gradient(rgba(245, 158, 11, 0.03) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
+  background-size: 40px 40px;
+}
+
+.bg-radial-glow {
+  background: radial-gradient(ellipse at center,
+      rgba(245, 158, 11, 0.08) 0%,
+      transparent 60%);
+}
+
+/* ========================================
+   SCROLLBAR STYLING
+   ======================================== */
+
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: rgba(30, 41, 59, 0.5);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb {
+  background: rgba(100, 116, 139, 0.5);
+  border-radius: 4px;
+  transition: background 0.2s;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(148, 163, 184, 0.6);
+}
+
+/* ========================================
+   SKELETON LOADING
+   ======================================== */
+
 .skeleton {
-  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background: linear-gradient(90deg,
+      rgba(51, 65, 85, 0.4) 0%,
+      rgba(71, 85, 105, 0.4) 50%,
+      rgba(51, 65, 85, 0.4) 100%);
   background-size: 200% 100%;
-  animation: skeleton-loading 1.5s infinite;
+  animation: shimmer 1.5s infinite;
 }
 
-@keyframes skeleton-loading {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
+/* ========================================
+   FAB PULSE RING
+   ======================================== */
+
+.fab-ring::before {
+  content: '';
+  position: absolute;
+  inset: -4px;
+  border-radius: 50%;
+  border: 2px solid rgba(245, 158, 11, 0.6);
+  animation: pulse-ring 2s ease-out infinite;
+}
+
+/* ========================================
+   DECORATIVE LINES
+   ======================================== */
+
+.line-gradient-gold {
+  height: 1px;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(245, 158, 11, 0.3) 20%,
+      rgba(245, 158, 11, 0.5) 50%,
+      rgba(245, 158, 11, 0.3) 80%,
+      transparent 100%);
+}
+
+/* ========================================
+   MEETING STATUS COLORS
+   ======================================== */
+
+.status-scheduled {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
+  border-left: 3px solid #f59e0b;
+}
+
+.status-completed {
+  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
+  border-left: 3px solid #10b981;
+}
+
+.status-cancelled {
+  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
+  border-left: 3px solid #ef4444;
+  opacity: 0.7;
+}
+
+.status-cancelled .meeting-title {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+/* ========================================
+   TAB INDICATOR
+   ======================================== */
+
+.tab-indicator {
+  position: absolute;
+  bottom: 0;
+  height: 2px;
+  background: linear-gradient(90deg, #fbbf24, #f59e0b);
+  border-radius: 1px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ========================================
+   TOAST PROGRESS BAR
+   ======================================== */
+
+.toast-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 3px;
+  border-radius: 0 0 0 8px;
+  animation: progress-countdown 4s linear forwards;
+}
+
+.toast-progress-success {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.toast-progress-error {
+  background: linear-gradient(90deg, #ef4444, #dc2626);
+}
+
+.toast-progress-warning {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.toast-progress-info {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+/* ========================================
+   AVATAR INITIALS
+   ======================================== */
+
+.avatar-initials {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 600;
+  text-transform: uppercase;
+  background: rgba(245, 158, 11, 0.15);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+/* ========================================
+   CALENDAR SPECIFIC
+   ======================================== */
+
+.calendar-day-current {
+  background: rgba(245, 158, 11, 0.2);
+  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4), 0 0 24px rgba(245, 158, 11, 0.2);
+}
+
+.calendar-day-hover:hover {
+  background: rgba(51, 65, 85, 0.5);
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.calendar-weekend {
+  background: rgba(15, 23, 42, 0.3);
+}
+
+.now-indicator {
+  position: relative;
+}
+
+.now-indicator::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  transform: translateX(-50%);
+  animation: pulse-glow 1.5s ease-in-out infinite;
+  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+/* ========================================
+   MODAL DECORATIONS
+   ======================================== */
+
+.modal-header-line {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg,
+      transparent 0%,
+      rgba(245, 158, 11, 0.5) 20%,
+      #f59e0b 50%,
+      rgba(245, 158, 11, 0.5) 80%,
+      transparent 100%);
+  border-radius: 8px 8px 0 0;
+}
+
+/* ========================================
+   UTILITY CLASSES
+   ======================================== */
+
+.tabular-nums {
+  font-variant-numeric: tabular-nums;
+}
+
+.line-clamp-1 {
+  display: -webkit-box;
+  -webkit-line-clamp: 1;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+.line-clamp-2 {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+
+/* Focus visible for accessibility */
+:focus-visible {
+  outline: 2px solid rgba(245, 158, 11, 0.5);
+  outline-offset: 2px;
+}
+
+/* Selection color */
+::selection {
+  background: rgba(245, 158, 11, 0.3);
+  color: white;
+}
+
+/* ========================================
+   FAB TOOLTIP
+   ======================================== */
+
+.fab-tooltip {
+  position: absolute;
+  right: 100%;
+  top: 50%;
+  transform: translateY(-50%);
+  margin-right: 12px;
+  padding: 6px 12px;
+  background: rgba(30, 41, 59, 0.95);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  color: #fbbf24;
+  white-space: nowrap;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease, transform 0.2s ease;
+  transform: translateY(-50%) translateX(8px);
+}
+
+.fab-tooltip::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 6px solid transparent;
+  border-left-color: rgba(30, 41, 59, 0.95);
+}
+
+.fab-container:hover .fab-tooltip {
+  opacity: 1;
+  transform: translateY(-50%) translateX(0);
+}
+
+/* ========================================
+   ICON CIRCLE BACKGROUNDS
+   ======================================== */
+
+.icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.1);
+  flex-shrink: 0;
+}
+
+.icon-circle-sm {
+  width: 28px;
+  height: 28px;
+}
+
+/* ========================================
+   WEEKEND CALENDAR CELLS
+   ======================================== */
+
+.calendar-cell-weekend {
+  background: rgba(15, 23, 42, 0.4);
+}
+
+.calendar-cell-weekend:hover {
+  background: rgba(51, 65, 85, 0.4);
+}
+
+/* ========================================
+   TREND INDICATORS
+   ======================================== */
+
+.trend-up {
+  color: #10b981;
+}
+
+.trend-down {
+  color: #ef4444;
+}
+
+/* ========================================
+   CANCELLED MEETING STYLE
+   ======================================== */
+
+.meeting-cancelled {
+  opacity: 0.6;
+}
+
+.meeting-cancelled .meeting-title {
+  text-decoration: line-through;
 }

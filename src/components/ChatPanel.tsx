@@ -1,9 +1,16 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Video, Sparkles, Loader2, Calendar, Clock, Mail, FileText, Check, X, Zap } from 'lucide-react';
+import { Send, Bot, User, Video, Sparkles, Loader2, Calendar, Clock, Mail, FileText, Check, X, Zap, Trash2 } from 'lucide-react';
 import { parseMeetingFromText, getMissingFieldsMessage, type ParsedMeeting } from '../utils/meetingParser';
 import { GrokService } from '../services/grokService';
 import { isGrokConfigured } from '../config/grok';
 import { formatTime } from '../utils/dateUtils';
+import {
+    saveConversationHistory,
+    loadConversationHistory,
+    clearConversationHistory,
+    saveContacts,
+    type HistoryMessage,
+} from '../utils/agentMemory';
 
 interface ChatMessage {
     id: string;
@@ -91,6 +98,49 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
         setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' }), 100);
     };
     useEffect(scrollToBottom, [messages]);
+
+    // ===== MEMORY: Load conversation history on mount =====
+    useEffect(() => {
+        if (parserMode !== 'grok') return;
+        const saved = loadConversationHistory();
+        if (saved.length > 0) {
+            // Restore conversation messages to UI
+            const restored: ChatMessage[] = [makeWelcome('grok')];
+            saved.forEach(m => {
+                restored.push({
+                    id: `restored-${m.timestamp}`,
+                    role: m.role,
+                    content: m.content,
+                    timestamp: new Date(m.timestamp),
+                });
+            });
+            setMessages(restored);
+            // Restore history for API calls
+            setGrokHistory(saved.map(m => ({ role: m.role, content: m.content })));
+        }
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    // ===== MEMORY: Save conversation history when grokHistory changes =====
+    useEffect(() => {
+        if (grokHistory.length > 0) {
+            const historyWithTimestamps: HistoryMessage[] = grokHistory.map(m => ({
+                ...m,
+                timestamp: Date.now(),
+            }));
+            saveConversationHistory(historyWithTimestamps);
+        }
+    }, [grokHistory]);
+
+    // Clear conversation memory
+    const handleClearMemory = () => {
+        clearConversationHistory();
+        setMessages([makeWelcome(parserMode)]);
+        setGrokHistory([]);
+        setConversationContext('');
+        setPendingMeeting(null);
+        setChatState('idle');
+    };
 
     // Switch parser mode → reset conversation
     const switchMode = (mode: ParserMode) => {
@@ -211,10 +261,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     addMessage('assistant', `📧 Convite enviado para: ${pendingMeeting.participants.join(', ')}`);
                 }
 
+                // ===== MEMORY: Save contacts on successful schedule =====
+                saveContacts(pendingMeeting.participants, pendingMeeting.participant_names);
+
                 setTimeout(() => {
                     setPendingMeeting(null);
                     setConversationContext('');
                     setGrokHistory([]);
+                    clearConversationHistory();
                     setChatState('idle');
                 }, 1500);
             } else {
@@ -265,8 +319,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-white/5 bg-gradient-to-r from-[#0f0f0f] to-[#141414]">
                 <div className="relative">
                     <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shadow-lg ${parserMode === 'grok'
-                            ? 'bg-gradient-to-br from-purple-600 to-purple-400 shadow-purple-500/25'
-                            : 'bg-gradient-to-br from-[#1a73e8] to-[#4facfe] shadow-[#1a73e8]/25'
+                        ? 'bg-gradient-to-br from-purple-600 to-purple-400 shadow-purple-500/25'
+                        : 'bg-gradient-to-br from-[#1a73e8] to-[#4facfe] shadow-[#1a73e8]/25'
                         }`}>
                         {parserMode === 'grok'
                             ? <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
@@ -279,8 +333,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     <h3 className="text-white font-semibold text-sm flex items-center gap-2">
                         Agenda AI
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${parserMode === 'grok'
-                                ? 'bg-purple-500/20 text-purple-300'
-                                : 'bg-[#1a73e8]/20 text-[#4facfe]'
+                            ? 'bg-purple-500/20 text-purple-300'
+                            : 'bg-[#1a73e8]/20 text-[#4facfe]'
                             }`}>
                             {parserMode === 'grok' ? '⚡ GROK' : '💻 LOCAL'}
                         </span>
@@ -296,8 +350,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                         onClick={() => switchMode('grok')}
                         disabled={!grokConfigured}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${parserMode === 'grok'
-                                ? 'bg-purple-500/20 text-purple-300 shadow-sm'
-                                : 'text-gray-500 hover:text-gray-300'
+                            ? 'bg-purple-500/20 text-purple-300 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-300'
                             } ${!grokConfigured ? 'opacity-40 cursor-not-allowed' : ''}`}
                         title={!grokConfigured ? 'API key não configurada' : 'Agente Grok AI'}
                     >
@@ -307,8 +361,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     <button
                         onClick={() => switchMode('local')}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${parserMode === 'local'
-                                ? 'bg-[#1a73e8]/20 text-[#4facfe] shadow-sm'
-                                : 'text-gray-500 hover:text-gray-300'
+                            ? 'bg-[#1a73e8]/20 text-[#4facfe] shadow-sm'
+                            : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         <Bot className="w-3 h-3" />
@@ -320,6 +374,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                     <span className="text-[10px] text-green-400 font-medium">Online</span>
                 </div>
+
+                {/* Clear memory */}
+                <button
+                    onClick={handleClearMemory}
+                    title="Limpar conversa e memória"
+                    className="p-2 rounded-lg text-gray-600 hover:text-gray-300 hover:bg-white/5 transition-all"
+                >
+                    <Trash2 className="w-4 h-4" />
+                </button>
             </div>
 
             {/* Messages */}
@@ -328,8 +391,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     <div key={msg.id} className={`flex gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                         {msg.role === 'assistant' && (
                             <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 border ${parserMode === 'grok'
-                                    ? 'bg-purple-500/20 border-purple-500/20'
-                                    : 'bg-gradient-to-br from-[#1a73e8]/30 to-[#4facfe]/20 border-[#1a73e8]/20'
+                                ? 'bg-purple-500/20 border-purple-500/20'
+                                : 'bg-gradient-to-br from-[#1a73e8]/30 to-[#4facfe]/20 border-[#1a73e8]/20'
                                 }`}>
                                 {parserMode === 'grok'
                                     ? <Zap className="w-4 h-4 text-purple-400" />

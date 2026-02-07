@@ -1,5 +1,6 @@
 import { GROK_CONFIG, isGrokConfigured } from '../config/grok';
 import type { ParsedMeeting } from '../utils/meetingParser';
+import { formatContactsForPrompt } from '../utils/agentMemory';
 
 interface GrokMessage {
     role: 'system' | 'user' | 'assistant';
@@ -107,7 +108,8 @@ export class GrokService {
             .replace(/{TODAY_DATE}/g, `${fmt(today)} (${fmtBR(today)})`)
             .replace(/{TODAY_WEEKDAY}/g, WEEKDAYS[today.getDay()])
             .replace(/{CURRENT_TIME}/g, today.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }))
-            .replace(/{TOMORROW_DATE}/g, `${fmt(tomorrow)} (${fmtBR(tomorrow)})`);
+            .replace(/{TOMORROW_DATE}/g, `${fmt(tomorrow)} (${fmtBR(tomorrow)})`)
+            + formatContactsForPrompt();
     }
 
     /**

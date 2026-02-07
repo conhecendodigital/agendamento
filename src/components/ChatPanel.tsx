@@ -27,7 +27,13 @@ interface ChatPanelProps {
     organizerName: string;
 }
 
-const SUGGESTIONS = [
+const SUGGESTIONS_GROK = [
+    '👋 Quero agendar uma reunião',
+    '📅 Tenho uma call amanhã às 14h',
+    '📧 Preciso marcar com fulano@email.com',
+];
+
+const SUGGESTIONS_LOCAL = [
     '📅 Reunião amanhã às 14h sobre projeto',
     '📧 Call com gui@email.com segunda 10h',
     '🗓️ Agendar para sexta 16h revisão',
@@ -40,7 +46,6 @@ const ConfidenceBadge: React.FC<{ confidence: number }> = ({ confidence }) => {
         : confidence >= 0.6
             ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'
             : 'text-orange-400 bg-orange-400/10 border-orange-400/20';
-
     const label = confidence >= 0.8 ? 'Alta' : confidence >= 0.6 ? 'Média' : 'Baixa';
 
     return (
@@ -52,19 +57,32 @@ const ConfidenceBadge: React.FC<{ confidence: number }> = ({ confidence }) => {
 };
 
 export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organizerName }) => {
-    const welcomeMsg: ChatMessage = {
+    const firstName = organizerName.split(' ')[0];
+
+    const grokWelcome = `Olá ${firstName}! 👋 Sou a Agenda AI, sua assistente de agendamento da Valento Academy.\n\nComo posso te ajudar? Me conte sobre a reunião que precisa agendar! 😊`;
+    const localWelcome = `Olá ${firstName}! 👋 Sou seu assistente de agendamento.\n\nMe conte sobre a reunião:\n• 📧 Com quem? (email)\n• 📅 Quando? (data e horário)\n• 📝 Qual o assunto?`;
+
+    const grokConfigured = isGrokConfigured();
+    const [parserMode, setParserMode] = useState<ParserMode>(grokConfigured ? 'grok' : 'local');
+
+    const makeWelcome = (mode: ParserMode): ChatMessage => ({
         id: 'welcome',
         role: 'assistant',
-        content: `Olá ${organizerName.split(' ')[0]}! 👋 Sou seu assistente de agendamento.\n\nMe conte sobre a reunião:\n• 📧 Com quem? (email)\n• 📅 Quando? (data e horário)\n• 📝 Qual o assunto?`,
+        content: mode === 'grok' ? grokWelcome : localWelcome,
         timestamp: new Date(),
-    };
+    });
 
-    const [messages, setMessages] = useState<ChatMessage[]>([welcomeMsg]);
+    const [messages, setMessages] = useState<ChatMessage[]>([makeWelcome(parserMode)]);
     const [input, setInput] = useState('');
     const [chatState, setChatState] = useState<ChatState>('idle');
     const [pendingMeeting, setPendingMeeting] = useState<ParsedMeeting | null>(null);
+
+    // Local parser context
     const [conversationContext, setConversationContext] = useState('');
-    const [parserMode, setParserMode] = useState<ParserMode>(isGrokConfigured() ? 'grok' : 'local');
+
+    // Grok conversation history (role + content for API calls)
+    const [grokHistory, setGrokHistory] = useState<Array<{ role: 'user' | 'assistant'; content: string }>>([]);
+
     const [isProcessingWithGrok, setIsProcessingWithGrok] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
@@ -74,64 +92,109 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
     };
     useEffect(scrollToBottom, [messages]);
 
+    // Switch parser mode → reset conversation
+    const switchMode = (mode: ParserMode) => {
+        if (mode === parserMode) return;
+        setParserMode(mode);
+        setMessages([makeWelcome(mode)]);
+        setGrokHistory([]);
+        setConversationContext('');
+        setPendingMeeting(null);
+        setChatState('idle');
+    };
+
     const addMessage = (role: 'user' | 'assistant', content: string, extras?: Partial<ChatMessage>) => {
         const msg: ChatMessage = { id: Date.now().toString() + Math.random(), role, content, timestamp: new Date(), ...extras };
         setMessages(prev => [...prev, msg]);
         return msg;
     };
 
+    // ============ HANDLE SEND ============
     const handleSend = async () => {
         const text = input.trim();
-        if (!text || chatState === 'sending') return;
+        if (!text || chatState === 'sending' || chatState === 'confirming') return;
 
         addMessage('user', text);
         setInput('');
         if (inputRef.current) inputRef.current.style.height = '44px';
 
-        const fullContext = conversationContext + ' ' + text;
-        setConversationContext(fullContext);
-
         setChatState('processing');
-        const usingGrok = parserMode === 'grok';
-        setIsProcessingWithGrok(usingGrok);
 
-        // Small delay for UX
-        await new Promise(r => setTimeout(r, 300));
+        if (parserMode === 'grok') {
+            await handleGrokSend(text);
+        } else {
+            await handleLocalSend(text);
+        }
+    };
+
+    // ============ GROK FLOW (conversational) ============
+    const handleGrokSend = async (text: string) => {
+        setIsProcessingWithGrok(true);
 
         try {
-            let parsed: ParsedMeeting;
-            let usedGrok = false;
+            const result = await GrokService.chat(
+                grokHistory.map(m => GrokService.toHistoryMessage(m.role, m.content)),
+                text
+            );
 
-            if (usingGrok) {
-                const { result, usedGrok: grok } = await GrokService.parseMeetingWithFallback(fullContext);
-                parsed = result;
-                usedGrok = grok;
+            // Update conversation history
+            setGrokHistory(prev => [
+                ...prev,
+                { role: 'user', content: text },
+            ]);
 
-                if (!grok) {
-                    addMessage('assistant', '⚠️ Grok indisponível, usando parser local.');
-                }
-            } else {
-                parsed = parseMeetingFromText(fullContext);
-            }
-
-            if (parsed.ready) {
-                setPendingMeeting(parsed);
+            if (result.type === 'meeting' && result.meeting) {
+                // Grok collected all data → show confirmation
+                const meeting = result.meeting;
+                setPendingMeeting(meeting);
                 setChatState('confirming');
-                const emoji = usedGrok ? '✨' : (parsed.confidence > 0.8 ? '👍' : '🤔');
-                addMessage('assistant', `${emoji} Entendi! Confira os dados:`, { confirmationData: parsed });
+                addMessage('assistant', '✨ Perfeito! Tenho tudo que preciso. Confira os dados:', { confirmationData: meeting });
+
+                setGrokHistory(prev => [
+                    ...prev,
+                    { role: 'assistant', content: 'Dados completos coletados. Mostrando card de confirmação.' },
+                ]);
             } else {
+                // Grok is still chatting → show the message
+                const msg = result.message || 'Me conte mais sobre a reunião!';
                 setChatState('idle');
-                addMessage('assistant', getMissingFieldsMessage(parsed.missing));
+                addMessage('assistant', msg);
+
+                setGrokHistory(prev => [
+                    ...prev,
+                    { role: 'assistant', content: msg },
+                ]);
             }
         } catch (error) {
-            console.error('Erro fatal no parsing:', error);
+            console.error('❌ Grok error:', error);
             setChatState('idle');
-            addMessage('assistant', '❌ Erro ao processar. Tente novamente.');
+            addMessage('assistant', '⚠️ Grok indisponível no momento. Tente novamente ou use o modo Local.');
         } finally {
             setIsProcessingWithGrok(false);
         }
     };
 
+    // ============ LOCAL FLOW (one-shot extraction) ============
+    const handleLocalSend = async (text: string) => {
+        setIsProcessingWithGrok(false);
+        await new Promise(r => setTimeout(r, 400));
+
+        const fullContext = conversationContext + ' ' + text;
+        setConversationContext(fullContext);
+
+        const parsed = parseMeetingFromText(fullContext);
+
+        if (parsed.ready) {
+            setPendingMeeting(parsed);
+            setChatState('confirming');
+            addMessage('assistant', '👍 Entendi! Confira os dados:', { confirmationData: parsed });
+        } else {
+            setChatState('idle');
+            addMessage('assistant', getMissingFieldsMessage(parsed.missing));
+        }
+    };
+
+    // ============ CONFIRM / CANCEL ============
     const handleConfirm = async () => {
         if (!pendingMeeting) return;
         setChatState('sending');
@@ -151,6 +214,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                 setTimeout(() => {
                     setPendingMeeting(null);
                     setConversationContext('');
+                    setGrokHistory([]);
                     setChatState('idle');
                 }, 1500);
             } else {
@@ -168,8 +232,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
     const handleCancel = () => {
         setChatState('idle');
         setPendingMeeting(null);
-        addMessage('assistant', 'Ok, cancelado! Me conte novamente os dados da reunião. 😊');
-        setConversationContext('');
+        if (parserMode === 'grok') {
+            addMessage('assistant', 'Ok, cancelado! Me conte novamente os dados ou se quiser ajustar algo. 😊');
+            // Keep history so Grok remembers the context
+        } else {
+            addMessage('assistant', 'Ok, cancelado! Me conte novamente os dados da reunião. 😊');
+            setConversationContext('');
+        }
     };
 
     const handleKeyDown = (e: React.KeyboardEvent) => {
@@ -187,6 +256,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
     };
 
     const fmtTime = (t: string) => t ? formatTime(t.replace(/:00$/, '')) : '';
+    const suggestions = parserMode === 'grok' ? SUGGESTIONS_GROK : SUGGESTIONS_LOCAL;
 
     // =================== RENDER ===================
     return (
@@ -194,8 +264,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
             {/* Header with Grok/Local toggle */}
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-white/5 bg-gradient-to-r from-[#0f0f0f] to-[#141414]">
                 <div className="relative">
-                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#4facfe] flex items-center justify-center shadow-lg shadow-[#1a73e8]/25">
-                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                    <div className={`w-9 h-9 sm:w-11 sm:h-11 rounded-full flex items-center justify-center shadow-lg ${parserMode === 'grok'
+                            ? 'bg-gradient-to-br from-purple-600 to-purple-400 shadow-purple-500/25'
+                            : 'bg-gradient-to-br from-[#1a73e8] to-[#4facfe] shadow-[#1a73e8]/25'
+                        }`}>
+                        {parserMode === 'grok'
+                            ? <Zap className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                            : <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
+                        }
                     </div>
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-[#141414]" />
                 </div>
@@ -203,36 +279,36 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     <h3 className="text-white font-semibold text-sm flex items-center gap-2">
                         Agenda AI
                         <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${parserMode === 'grok'
-                            ? 'bg-purple-500/20 text-purple-300'
-                            : 'bg-[#1a73e8]/20 text-[#4facfe]'
+                                ? 'bg-purple-500/20 text-purple-300'
+                                : 'bg-[#1a73e8]/20 text-[#4facfe]'
                             }`}>
-                            {parserMode === 'grok' ? 'GROK' : 'LOCAL'}
+                            {parserMode === 'grok' ? '⚡ GROK' : '💻 LOCAL'}
                         </span>
                     </h3>
                     <p className="text-[11px] text-gray-500 truncate">
-                        {parserMode === 'grok' ? 'Powered by xAI Grok' : 'Parser Local PT-BR'}
+                        {parserMode === 'grok' ? 'Agente conversacional xAI' : 'Parser local PT-BR'}
                     </p>
                 </div>
 
-                {/* Toggle Grok/Local */}
+                {/* Toggle */}
                 <div className="flex items-center bg-[#0f0f0f] rounded-lg border border-white/5 p-0.5">
                     <button
-                        onClick={() => setParserMode('grok')}
-                        disabled={!isGrokConfigured()}
+                        onClick={() => switchMode('grok')}
+                        disabled={!grokConfigured}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${parserMode === 'grok'
-                            ? 'bg-purple-500/20 text-purple-300 shadow-sm'
-                            : 'text-gray-500 hover:text-gray-300'
-                            } ${!isGrokConfigured() ? 'opacity-40 cursor-not-allowed' : ''}`}
-                        title={!isGrokConfigured() ? 'API key não configurada' : 'Usar Grok AI'}
+                                ? 'bg-purple-500/20 text-purple-300 shadow-sm'
+                                : 'text-gray-500 hover:text-gray-300'
+                            } ${!grokConfigured ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        title={!grokConfigured ? 'API key não configurada' : 'Agente Grok AI'}
                     >
                         <Zap className="w-3 h-3" />
                         <span className="hidden sm:inline">Grok</span>
                     </button>
                     <button
-                        onClick={() => setParserMode('local')}
+                        onClick={() => switchMode('local')}
                         className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${parserMode === 'local'
-                            ? 'bg-[#1a73e8]/20 text-[#4facfe] shadow-sm'
-                            : 'text-gray-500 hover:text-gray-300'
+                                ? 'bg-[#1a73e8]/20 text-[#4facfe] shadow-sm'
+                                : 'text-gray-500 hover:text-gray-300'
                             }`}
                     >
                         <Bot className="w-3 h-3" />
@@ -251,8 +327,14 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                 {messages.map((msg) => (
                     <div key={msg.id} className={`flex gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                         {msg.role === 'assistant' && (
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a73e8]/30 to-[#4facfe]/20 flex items-center justify-center flex-shrink-0 mt-1 border border-[#1a73e8]/20">
-                                <Bot className="w-4 h-4 text-[#4facfe]" />
+                            <div className={`w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1 border ${parserMode === 'grok'
+                                    ? 'bg-purple-500/20 border-purple-500/20'
+                                    : 'bg-gradient-to-br from-[#1a73e8]/30 to-[#4facfe]/20 border-[#1a73e8]/20'
+                                }`}>
+                                {parserMode === 'grok'
+                                    ? <Zap className="w-4 h-4 text-purple-400" />
+                                    : <Bot className="w-4 h-4 text-[#4facfe]" />
+                                }
                             </div>
                         )}
                         <div className={`max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? 'order-first' : ''}`}>
@@ -279,7 +361,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                                 </div>
                             )}
 
-                            {/* ===== CONFIRMATION CARD ===== */}
+                            {/* Confirmation Card */}
                             {msg.confirmationData && (
                                 <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden shadow-xl shadow-black/20">
                                     <div className="bg-gradient-to-r from-[#1a73e8]/10 to-transparent px-4 py-3 border-b border-white/5">
@@ -322,8 +404,16 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                                                 <p className="text-sm text-white">{fmtTime(msg.confirmationData.start_time)} – {fmtTime(msg.confirmationData.end_time)}</p>
                                             </div>
                                         </div>
+                                        {msg.confirmationData.description && (
+                                            <div className="flex items-start gap-3">
+                                                <FileText className="w-4 h-4 text-[#4facfe] mt-0.5 flex-shrink-0" />
+                                                <div>
+                                                    <p className="text-[10px] text-gray-500 uppercase tracking-wider">Descrição</p>
+                                                    <p className="text-sm text-gray-300">{msg.confirmationData.description}</p>
+                                                </div>
+                                            </div>
+                                        )}
                                     </div>
-                                    {/* Action Buttons */}
                                     {chatState === 'confirming' && (
                                         <div className="px-4 pb-4 flex gap-2">
                                             <button
@@ -375,7 +465,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     </div>
                 ))}
 
-                {/* Typing indicator — Grok */}
+                {/* Grok typing indicator */}
                 {chatState === 'processing' && isProcessingWithGrok && (
                     <div className="flex gap-3 justify-start animate-fadeIn">
                         <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 border border-purple-500/20">
@@ -383,12 +473,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                         </div>
                         <div className="bg-[#1e1e1e] border border-white/5 px-4 py-3 rounded-2xl rounded-bl-md flex items-center gap-2">
                             <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
-                            <span className="text-sm text-gray-400">Grok está analisando...</span>
+                            <span className="text-sm text-gray-400">Grok está pensando...</span>
                         </div>
                     </div>
                 )}
 
-                {/* Typing indicator — Local */}
+                {/* Local typing indicator */}
                 {chatState === 'processing' && !isProcessingWithGrok && (
                     <div className="flex gap-3 justify-start animate-fadeIn">
                         <div className="w-8 h-8 rounded-full bg-[#1a73e8]/20 flex items-center justify-center flex-shrink-0 border border-[#1a73e8]/20">
@@ -423,10 +513,10 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
             {/* Suggestions */}
             {messages.length <= 1 && chatState === 'idle' && (
                 <div className="px-3 sm:px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
-                    {SUGGESTIONS.map((s, i) => (
+                    {suggestions.map((s, i) => (
                         <button
                             key={i}
-                            onClick={() => { setInput(s.replace(/^[📅📧🗓️]\s+/, '')); inputRef.current?.focus(); }}
+                            onClick={() => { setInput(s.replace(/^[👋📅📧🗓️]\s+/, '')); inputRef.current?.focus(); }}
                             className="text-xs px-3 py-2.5 rounded-xl bg-[#1a1a1a] border border-white/5 text-gray-400 hover:text-white active:bg-[#1a73e8]/10 hover:border-[#1a73e8]/30 hover:bg-[#1a73e8]/5 transition-all whitespace-nowrap flex-shrink-0"
                         >
                             {s}
@@ -447,7 +537,9 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                         placeholder={
                             chatState === 'confirming'
                                 ? 'Confirme ou cancele antes de continuar...'
-                                : 'Ex: Reunião com email@email.com amanhã 14h sobre projeto...'
+                                : parserMode === 'grok'
+                                    ? 'Converse naturalmente sobre sua reunião...'
+                                    : 'Ex: Reunião com email@email.com amanhã 14h sobre projeto...'
                         }
                         rows={1}
                         disabled={chatState === 'sending' || chatState === 'confirming'}

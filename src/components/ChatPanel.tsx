@@ -1,6 +1,8 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Send, Bot, User, Video, Sparkles, Loader2, Calendar, Clock, Mail, FileText, Check, X } from 'lucide-react';
+import { Send, Bot, User, Video, Sparkles, Loader2, Calendar, Clock, Mail, FileText, Check, X, Zap } from 'lucide-react';
 import { parseMeetingFromText, getMissingFieldsMessage, type ParsedMeeting } from '../utils/meetingParser';
+import { GrokService } from '../services/grokService';
+import { isGrokConfigured } from '../config/grok';
 import { formatTime } from '../utils/dateUtils';
 
 interface ChatMessage {
@@ -13,6 +15,7 @@ interface ChatMessage {
 }
 
 type ChatState = 'idle' | 'processing' | 'confirming' | 'sending' | 'success' | 'error';
+type ParserMode = 'grok' | 'local';
 
 interface ChatPanelProps {
     onConfirmSchedule: (data: ParsedMeeting) => Promise<{
@@ -30,6 +33,24 @@ const SUGGESTIONS = [
     '🗓️ Agendar para sexta 16h revisão',
 ];
 
+// ===== Confidence Badge =====
+const ConfidenceBadge: React.FC<{ confidence: number }> = ({ confidence }) => {
+    const color = confidence >= 0.8
+        ? 'text-green-400 bg-green-400/10 border-green-400/20'
+        : confidence >= 0.6
+            ? 'text-yellow-400 bg-yellow-400/10 border-yellow-400/20'
+            : 'text-orange-400 bg-orange-400/10 border-orange-400/20';
+
+    const label = confidence >= 0.8 ? 'Alta' : confidence >= 0.6 ? 'Média' : 'Baixa';
+
+    return (
+        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium border ${color}`}>
+            <span className="w-1.5 h-1.5 rounded-full bg-current" />
+            {label} {Math.round(confidence * 100)}%
+        </span>
+    );
+};
+
 export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organizerName }) => {
     const welcomeMsg: ChatMessage = {
         id: 'welcome',
@@ -43,6 +64,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
     const [chatState, setChatState] = useState<ChatState>('idle');
     const [pendingMeeting, setPendingMeeting] = useState<ParsedMeeting | null>(null);
     const [conversationContext, setConversationContext] = useState('');
+    const [parserMode, setParserMode] = useState<ParserMode>(isGrokConfigured() ? 'grok' : 'local');
+    const [isProcessingWithGrok, setIsProcessingWithGrok] = useState(false);
     const messagesEndRef = useRef<HTMLDivElement>(null);
     const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -65,26 +88,47 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
         setInput('');
         if (inputRef.current) inputRef.current.style.height = '44px';
 
-        // Accumulate context from all messages
         const fullContext = conversationContext + ' ' + text;
         setConversationContext(fullContext);
 
         setChatState('processing');
+        const usingGrok = parserMode === 'grok';
+        setIsProcessingWithGrok(usingGrok);
 
         // Small delay for UX
-        await new Promise(r => setTimeout(r, 400));
+        await new Promise(r => setTimeout(r, 300));
 
-        const parsed = parseMeetingFromText(fullContext);
+        try {
+            let parsed: ParsedMeeting;
+            let usedGrok = false;
 
-        if (parsed.ready) {
-            // All data extracted — show confirmation card
-            setPendingMeeting(parsed);
-            setChatState('confirming');
-            addMessage('assistant', 'Entendi! Confira os dados:', { confirmationData: parsed });
-        } else {
-            // Missing info — ask for it
+            if (usingGrok) {
+                const { result, usedGrok: grok } = await GrokService.parseMeetingWithFallback(fullContext);
+                parsed = result;
+                usedGrok = grok;
+
+                if (!grok) {
+                    addMessage('assistant', '⚠️ Grok indisponível, usando parser local.');
+                }
+            } else {
+                parsed = parseMeetingFromText(fullContext);
+            }
+
+            if (parsed.ready) {
+                setPendingMeeting(parsed);
+                setChatState('confirming');
+                const emoji = usedGrok ? '✨' : (parsed.confidence > 0.8 ? '👍' : '🤔');
+                addMessage('assistant', `${emoji} Entendi! Confira os dados:`, { confirmationData: parsed });
+            } else {
+                setChatState('idle');
+                addMessage('assistant', getMissingFieldsMessage(parsed.missing));
+            }
+        } catch (error) {
+            console.error('Erro fatal no parsing:', error);
             setChatState('idle');
-            addMessage('assistant', getMissingFieldsMessage(parsed.missing));
+            addMessage('assistant', '❌ Erro ao processar. Tente novamente.');
+        } finally {
+            setIsProcessingWithGrok(false);
         }
     };
 
@@ -104,7 +148,6 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     addMessage('assistant', `📧 Convite enviado para: ${pendingMeeting.participants.join(', ')}`);
                 }
 
-                // Reset for next conversation
                 setTimeout(() => {
                     setPendingMeeting(null);
                     setConversationContext('');
@@ -148,7 +191,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
     // =================== RENDER ===================
     return (
         <div className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden flex flex-col" style={{ height: 'calc(100dvh - 200px)', minHeight: '400px' }}>
-            {/* Header */}
+            {/* Header with Grok/Local toggle */}
             <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-white/5 bg-gradient-to-r from-[#0f0f0f] to-[#141414]">
                 <div className="relative">
                     <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#4facfe] flex items-center justify-center shadow-lg shadow-[#1a73e8]/25">
@@ -156,14 +199,48 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     </div>
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-[#141414]" />
                 </div>
-                <div>
+                <div className="flex-1 min-w-0">
                     <h3 className="text-white font-semibold text-sm flex items-center gap-2">
                         Agenda AI
-                        <span className="text-[10px] bg-[#1a73e8]/20 text-[#4facfe] px-2 py-0.5 rounded-full font-medium">BETA</span>
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full font-medium ${parserMode === 'grok'
+                            ? 'bg-purple-500/20 text-purple-300'
+                            : 'bg-[#1a73e8]/20 text-[#4facfe]'
+                            }`}>
+                            {parserMode === 'grok' ? 'GROK' : 'LOCAL'}
+                        </span>
                     </h3>
-                    <p className="text-[11px] text-gray-500">Agendar reuniões por chat</p>
+                    <p className="text-[11px] text-gray-500 truncate">
+                        {parserMode === 'grok' ? 'Powered by xAI Grok' : 'Parser Local PT-BR'}
+                    </p>
                 </div>
-                <div className="ml-auto flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20">
+
+                {/* Toggle Grok/Local */}
+                <div className="flex items-center bg-[#0f0f0f] rounded-lg border border-white/5 p-0.5">
+                    <button
+                        onClick={() => setParserMode('grok')}
+                        disabled={!isGrokConfigured()}
+                        className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${parserMode === 'grok'
+                            ? 'bg-purple-500/20 text-purple-300 shadow-sm'
+                            : 'text-gray-500 hover:text-gray-300'
+                            } ${!isGrokConfigured() ? 'opacity-40 cursor-not-allowed' : ''}`}
+                        title={!isGrokConfigured() ? 'API key não configurada' : 'Usar Grok AI'}
+                    >
+                        <Zap className="w-3 h-3" />
+                        <span className="hidden sm:inline">Grok</span>
+                    </button>
+                    <button
+                        onClick={() => setParserMode('local')}
+                        className={`px-2.5 py-1.5 rounded-md text-[11px] font-medium transition-all flex items-center gap-1.5 ${parserMode === 'local'
+                            ? 'bg-[#1a73e8]/20 text-[#4facfe] shadow-sm'
+                            : 'text-gray-500 hover:text-gray-300'
+                            }`}
+                    >
+                        <Bot className="w-3 h-3" />
+                        <span className="hidden sm:inline">Local</span>
+                    </button>
+                </div>
+
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-green-500/10 border border-green-500/20">
                     <div className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
                     <span className="text-[10px] text-green-400 font-medium">Online</span>
                 </div>
@@ -206,10 +283,13 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                             {msg.confirmationData && (
                                 <div className="bg-[#1a1a1a] border border-white/10 rounded-2xl overflow-hidden shadow-xl shadow-black/20">
                                     <div className="bg-gradient-to-r from-[#1a73e8]/10 to-transparent px-4 py-3 border-b border-white/5">
-                                        <p className="text-sm font-medium text-white flex items-center gap-2">
-                                            <Calendar className="w-4 h-4 text-[#4facfe]" />
-                                            Confirme os dados da reunião
-                                        </p>
+                                        <div className="flex items-center justify-between">
+                                            <p className="text-sm font-medium text-white flex items-center gap-2">
+                                                <Calendar className="w-4 h-4 text-[#4facfe]" />
+                                                Confirme os dados
+                                            </p>
+                                            <ConfidenceBadge confidence={msg.confirmationData.confidence} />
+                                        </div>
                                     </div>
                                     <div className="p-4 space-y-3">
                                         <div className="flex items-start gap-3">
@@ -295,8 +375,21 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                     </div>
                 ))}
 
-                {/* Typing indicator */}
-                {chatState === 'processing' && (
+                {/* Typing indicator — Grok */}
+                {chatState === 'processing' && isProcessingWithGrok && (
+                    <div className="flex gap-3 justify-start animate-fadeIn">
+                        <div className="w-8 h-8 rounded-full bg-purple-500/20 flex items-center justify-center flex-shrink-0 border border-purple-500/20">
+                            <Zap className="w-4 h-4 text-purple-400 animate-pulse" />
+                        </div>
+                        <div className="bg-[#1e1e1e] border border-white/5 px-4 py-3 rounded-2xl rounded-bl-md flex items-center gap-2">
+                            <Loader2 className="w-4 h-4 text-purple-400 animate-spin" />
+                            <span className="text-sm text-gray-400">Grok está analisando...</span>
+                        </div>
+                    </div>
+                )}
+
+                {/* Typing indicator — Local */}
+                {chatState === 'processing' && !isProcessingWithGrok && (
                     <div className="flex gap-3 justify-start animate-fadeIn">
                         <div className="w-8 h-8 rounded-full bg-[#1a73e8]/20 flex items-center justify-center flex-shrink-0 border border-[#1a73e8]/20">
                             <Bot className="w-4 h-4 text-[#4facfe]" />

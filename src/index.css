@@ -249,3 +249,34 @@ body {
   background-color: var(--netflix-blue);
   color: var(--netflix-white);
 }
+
+/* ===== MOBILE UTILITIES ===== */
+
+/* Hide scrollbar but allow scrolling (for horizontal suggestion chips etc.) */
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+/* iOS safe area padding */
+.pb-safe {
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+/* Prevent double-tap zoom on interactive elements */
+button,
+a,
+input,
+textarea,
+select {
+  touch-action: manipulation;
+}
+
+/* Remove tap highlight on mobile */
+* {
+  -webkit-tap-highlight-color: transparent;
+}

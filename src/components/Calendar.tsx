@@ -201,16 +201,16 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
     return (
         <div className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden">
             {/* Header Controls */}
-            <div className="flex flex-col sm:flex-row gap-3 p-4 lg:px-6 border-b border-white/5">
-                <div className="flex items-center gap-2">
-                    <button onClick={goToPrevious} className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all">
+            <div className="flex flex-col sm:flex-row gap-2 sm:gap-3 p-3 sm:p-4 lg:px-6 border-b border-white/5">
+                <div className="flex items-center gap-1 sm:gap-2">
+                    <button onClick={goToPrevious} className="p-2.5 sm:p-2 rounded-full hover:bg-white/10 active:bg-white/15 text-gray-400 hover:text-white transition-all">
                         <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <button onClick={goToNext} className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all">
+                    <button onClick={goToNext} className="p-2.5 sm:p-2 rounded-full hover:bg-white/10 active:bg-white/15 text-gray-400 hover:text-white transition-all">
                         <ChevronRight className="w-5 h-5" />
                     </button>
-                    <h2 className="text-lg lg:text-xl font-semibold text-white ml-2">{getTitle()}</h2>
-                    <button onClick={goToToday} className="ml-3 px-3 py-1.5 text-sm rounded-full border border-white/20 hover:bg-white/10 text-white font-medium transition-all">
+                    <h2 className="text-base sm:text-lg lg:text-xl font-semibold text-white ml-1 sm:ml-2 truncate">{getTitle()}</h2>
+                    <button onClick={goToToday} className="ml-auto sm:ml-3 px-3 py-1.5 text-sm rounded-full border border-white/20 hover:bg-white/10 active:bg-white/15 text-white font-medium transition-all flex-shrink-0">
                         Hoje
                     </button>
                 </div>
@@ -219,9 +219,9 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                         <button
                             key={mode}
                             onClick={() => setViewMode(mode)}
-                            className={`px-4 py-1.5 text-sm rounded-full transition-all font-medium ${viewMode === mode
-                                    ? 'bg-[#1a73e8] text-white shadow-lg shadow-[#1a73e8]/20'
-                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            className={`flex-1 sm:flex-none min-w-[60px] px-3 sm:px-4 py-2 sm:py-1.5 text-sm rounded-full transition-all font-medium ${viewMode === mode
+                                ? 'bg-[#1a73e8] text-white shadow-lg shadow-[#1a73e8]/20'
+                                : 'text-gray-400 hover:text-white hover:bg-white/5 active:bg-white/10'
                                 }`}
                         >
                             {mode === 'month' ? 'Mês' : mode === 'week' ? 'Semana' : 'Dia'}
@@ -232,7 +232,7 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
 
             {/* =================== MONTH VIEW =================== */}
             {viewMode === 'month' && (
-                <div className="p-4 lg:px-6">
+                <div className="p-2 sm:p-4 lg:px-6">
                     <div className="grid grid-cols-7 gap-px mb-px">
                         {dayNamesShort.map((day) => (
                             <div key={day} className="text-center text-xs text-gray-500 uppercase font-medium py-2">{day.slice(0, 3)}</div>
@@ -250,7 +250,7 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                                     key={index}
                                     onClick={() => onDateSelect(date)}
                                     className={`
-                                        min-h-[80px] sm:min-h-[100px] lg:min-h-[110px] p-1.5 sm:p-2 cursor-pointer transition-all
+                                        min-h-[64px] sm:min-h-[100px] lg:min-h-[110px] p-1 sm:p-2 cursor-pointer transition-all active:bg-[#252525]
                                         ${isCurrentMonth ? 'bg-[#1a1a1a] hover:bg-[#222]' : 'bg-[#111] hover:bg-[#1a1a1a]'}
                                     `}
                                 >
@@ -324,7 +324,7 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                             })}
                         </div>
                         {/* Corpo com time grid */}
-                        <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 240px)', minHeight: '500px' }}>
+                        <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 300px)', minHeight: '400px' }}>
                             <div className="grid" style={{ gridTemplateColumns: '56px 1fr' }}>
                                 {/* Coluna de horas */}
                                 <div className="relative" style={{ height: `${TOTAL_HEIGHT}px` }}>
@@ -371,7 +371,7 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                         </div>
                     </div>
                     {/* Corpo */}
-                    <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)', minHeight: '500px' }}>
+                    <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100dvh - 340px)', minHeight: '400px' }}>
                         <div className="grid" style={{ gridTemplateColumns: '56px 1fr' }}>
                             {/* Coluna de horas */}
                             <div className="relative" style={{ height: `${TOTAL_HEIGHT}px` }}>

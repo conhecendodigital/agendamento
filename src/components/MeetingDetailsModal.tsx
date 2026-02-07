@@ -51,30 +51,30 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
     const meetingDate = new Date(meeting.date + 'T12:00:00');
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Modal - Netflix Style */}
-            <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[#141414] border border-white/10 rounded-lg shadow-2xl animate-fadeInUp">
+            {/* Modal - Netflix Style — fullscreen on mobile */}
+            <div className="relative w-full sm:max-w-lg max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto bg-[#141414] border-t sm:border border-white/10 rounded-t-2xl sm:rounded-lg shadow-2xl animate-fadeInUp">
                 {/* Netflix Blue Line */}
                 <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#0071eb] rounded-t-lg" />
 
                 {/* Header */}
-                <div className="sticky top-0 z-10 flex items-start justify-between p-5 border-b border-white/5 bg-[#141414]">
+                <div className="sticky top-0 z-10 flex items-start justify-between p-4 sm:p-5 border-b border-white/5 bg-[#141414]">
                     <div className="flex-1 pr-4">
                         <div className="mb-3">{getStatusBadge()}</div>
-                        <h2 className="text-xl font-bold text-white line-clamp-2">{meeting.title}</h2>
+                        <h2 className="text-lg sm:text-xl font-bold text-white line-clamp-2">{meeting.title}</h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
+                        className="p-2.5 sm:p-2 rounded-lg hover:bg-white/5 active:bg-white/10 border border-transparent hover:border-white/10 transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
                     >
                         <X className="w-5 h-5 text-gray-400" />
                     </button>
                 </div>
 
-                <div className="p-5 space-y-5">
+                <div className="p-4 sm:p-5 space-y-4 sm:space-y-5">
                     {/* Date/Time */}
                     <div className="flex flex-col sm:flex-row gap-4">
                         <div className="flex items-center gap-3 text-gray-300">
@@ -166,18 +166,18 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
                 </div>
 
                 {/* Action Buttons */}
-                <div className="flex flex-wrap gap-2 p-5 pt-0">
+                <div className="flex flex-wrap gap-2 p-4 sm:p-5 pt-0 pb-safe">
                     {meeting.status !== 'cancelled' && (
                         <>
                             <button
                                 onClick={() => { onClose(); onEdit(meeting); }}
-                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 px-4 bg-[#222] text-white border border-white/10 rounded-lg hover:bg-[#333] transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
+                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 bg-[#222] text-white border border-white/10 rounded-lg hover:bg-[#333] active:bg-[#3a3a3a] transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
                             >
                                 <Edit className="w-4 h-4" />Editar
                             </button>
                             <button
                                 onClick={() => onCancel(meeting)}
-                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 px-4 bg-[#f5c518]/20 text-[#f5c518] border border-[#f5c518]/30 rounded-lg hover:bg-[#f5c518]/30 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#f5c518]"
+                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 bg-[#f5c518]/20 text-[#f5c518] border border-[#f5c518]/30 rounded-lg hover:bg-[#f5c518]/30 active:bg-[#f5c518]/40 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#f5c518]"
                             >
                                 <XCircle className="w-4 h-4" />Cancelar
                             </button>
@@ -185,7 +185,7 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
                     )}
                     <button
                         onClick={() => onDelete(meeting)}
-                        className={`flex items-center justify-center gap-2 py-2.5 px-4 bg-[#e50914]/20 text-[#e50914] border border-[#e50914]/30 rounded-lg hover:bg-[#e50914]/30 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#e50914] ${meeting.status === 'cancelled' ? 'flex-1' : ''}`}
+                        className={`flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 bg-[#e50914]/20 text-[#e50914] border border-[#e50914]/30 rounded-lg hover:bg-[#e50914]/30 active:bg-[#e50914]/40 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#e50914] ${meeting.status === 'cancelled' ? 'flex-1' : ''}`}
                     >
                         <Trash2 className="w-4 h-4" />Excluir
                     </button>

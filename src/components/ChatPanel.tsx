@@ -147,12 +147,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
 
     // =================== RENDER ===================
     return (
-        <div className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden flex flex-col" style={{ height: 'calc(100vh - 280px)', minHeight: '500px' }}>
+        <div className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden flex flex-col" style={{ height: 'calc(100dvh - 200px)', minHeight: '400px' }}>
             {/* Header */}
-            <div className="flex items-center gap-3 px-5 py-4 border-b border-white/5 bg-gradient-to-r from-[#0f0f0f] to-[#141414]">
+            <div className="flex items-center gap-2 sm:gap-3 px-3 sm:px-5 py-3 sm:py-4 border-b border-white/5 bg-gradient-to-r from-[#0f0f0f] to-[#141414]">
                 <div className="relative">
-                    <div className="w-11 h-11 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#4facfe] flex items-center justify-center shadow-lg shadow-[#1a73e8]/25">
-                        <Sparkles className="w-5 h-5 text-white" />
+                    <div className="w-9 h-9 sm:w-11 sm:h-11 rounded-full bg-gradient-to-br from-[#1a73e8] to-[#4facfe] flex items-center justify-center shadow-lg shadow-[#1a73e8]/25">
+                        <Sparkles className="w-4 h-4 sm:w-5 sm:h-5 text-white" />
                     </div>
                     <div className="absolute -bottom-0.5 -right-0.5 w-3.5 h-3.5 rounded-full bg-green-500 border-2 border-[#141414]" />
                 </div>
@@ -170,15 +170,15 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
             </div>
 
             {/* Messages */}
-            <div className="flex-1 overflow-y-auto px-4 py-5 space-y-4">
+            <div className="flex-1 overflow-y-auto px-3 sm:px-4 py-4 sm:py-5 space-y-3 sm:space-y-4">
                 {messages.map((msg) => (
-                    <div key={msg.id} className={`flex gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
+                    <div key={msg.id} className={`flex gap-2 sm:gap-3 ${msg.role === 'user' ? 'justify-end' : 'justify-start'} animate-fadeIn`}>
                         {msg.role === 'assistant' && (
                             <div className="w-8 h-8 rounded-full bg-gradient-to-br from-[#1a73e8]/30 to-[#4facfe]/20 flex items-center justify-center flex-shrink-0 mt-1 border border-[#1a73e8]/20">
                                 <Bot className="w-4 h-4 text-[#4facfe]" />
                             </div>
                         )}
-                        <div className={`max-w-[85%] ${msg.role === 'user' ? 'order-first' : ''}`}>
+                        <div className={`max-w-[90%] sm:max-w-[85%] ${msg.role === 'user' ? 'order-first' : ''}`}>
                             {/* Text bubble */}
                             {!msg.confirmationData && (
                                 <div className={`
@@ -329,12 +329,12 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
 
             {/* Suggestions */}
             {messages.length <= 1 && chatState === 'idle' && (
-                <div className="px-4 pb-3 flex gap-2 flex-wrap">
+                <div className="px-3 sm:px-4 pb-3 flex gap-2 overflow-x-auto no-scrollbar">
                     {SUGGESTIONS.map((s, i) => (
                         <button
                             key={i}
                             onClick={() => { setInput(s.replace(/^[📅📧🗓️]\s+/, '')); inputRef.current?.focus(); }}
-                            className="text-xs px-3 py-2 rounded-xl bg-[#1a1a1a] border border-white/5 text-gray-400 hover:text-white hover:border-[#1a73e8]/30 hover:bg-[#1a73e8]/5 transition-all"
+                            className="text-xs px-3 py-2.5 rounded-xl bg-[#1a1a1a] border border-white/5 text-gray-400 hover:text-white active:bg-[#1a73e8]/10 hover:border-[#1a73e8]/30 hover:bg-[#1a73e8]/5 transition-all whitespace-nowrap flex-shrink-0"
                         >
                             {s}
                         </button>
@@ -343,8 +343,8 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
             )}
 
             {/* Input */}
-            <div className="px-4 py-3 border-t border-white/5 bg-[#0f0f0f]">
-                <div className={`flex items-end gap-2 bg-[#1a1a1a] rounded-2xl border transition-colors px-4 py-1 ${chatState === 'confirming' ? 'border-white/5 opacity-50' : 'border-white/10 focus-within:border-[#1a73e8]/50'
+            <div className="px-3 sm:px-4 py-3 border-t border-white/5 bg-[#0f0f0f]">
+                <div className={`flex items-end gap-2 bg-[#1a1a1a] rounded-2xl border transition-colors px-3 sm:px-4 py-1 ${chatState === 'confirming' ? 'border-white/5 opacity-50' : 'border-white/10 focus-within:border-[#1a73e8]/50'
                     }`}>
                     <textarea
                         ref={inputRef}
@@ -358,7 +358,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                         }
                         rows={1}
                         disabled={chatState === 'sending' || chatState === 'confirming'}
-                        className="flex-1 bg-transparent text-white text-sm placeholder-gray-600 resize-none outline-none py-2.5 max-h-[120px]"
+                        className="flex-1 bg-transparent text-white text-[16px] sm:text-sm placeholder-gray-600 resize-none outline-none py-2.5 max-h-[120px]"
                         style={{ height: '44px' }}
                     />
                     <button
@@ -375,7 +375,7 @@ export const ChatPanel: React.FC<ChatPanelProps> = ({ onConfirmSchedule, organiz
                         {chatState === 'sending' ? <Loader2 className="w-5 h-5 animate-spin" /> : <Send className="w-5 h-5" />}
                     </button>
                 </div>
-                <p className="text-[10px] text-gray-700 mt-1.5 text-center">
+                <p className="text-[10px] text-gray-700 mt-1.5 text-center hidden sm:block">
                     Enter para enviar • Shift+Enter para nova linha
                 </p>
             </div>

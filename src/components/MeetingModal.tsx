@@ -173,27 +173,27 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
     if (!isOpen) return null;
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4">
             {/* Backdrop */}
             <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Modal - Netflix Style */}
-            <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[#141414] border border-white/10 rounded-lg shadow-2xl animate-fadeInUp">
+            {/* Modal - Netflix Style — fullscreen on mobile */}
+            <div className="relative w-full sm:max-w-lg max-h-[100dvh] sm:max-h-[90vh] overflow-y-auto bg-[#141414] border-t sm:border border-white/10 rounded-t-2xl sm:rounded-lg shadow-2xl animate-fadeInUp">
                 {/* Header */}
-                <div className="sticky top-0 z-10 flex items-center justify-between p-5 border-b border-white/5 bg-[#141414]">
-                    <h2 className="text-lg font-bold text-white">
+                <div className="sticky top-0 z-10 flex items-center justify-between p-4 sm:p-5 border-b border-white/5 bg-[#141414]">
+                    <h2 className="text-base sm:text-lg font-bold text-white">
                         {editMeeting ? 'Editar Reunião' : 'Nova Reunião'}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-white/5 transition-colors"
+                        className="p-2.5 sm:p-2 rounded-lg hover:bg-white/5 active:bg-white/10 transition-colors"
                     >
                         <X className="w-5 h-5 text-gray-400" />
                     </button>
                 </div>
 
                 {/* Form */}
-                <form onSubmit={handleSubmit} className="p-5 space-y-5">
+                <form onSubmit={handleSubmit} className="p-4 sm:p-5 space-y-4 sm:space-y-5">
                     {/* Title */}
                     <div>
                         <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
@@ -204,7 +204,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                             value={formData.title}
                             onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
                             placeholder="Ex: Daily Meeting"
-                            className="w-full bg-[#222] border border-white/10 rounded py-3 px-4 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all"
+                            className="w-full bg-[#222] border border-white/10 rounded py-3 px-4 text-white text-[16px] sm:text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all"
                         />
                     </div>
 
@@ -218,7 +218,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                             onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
                             placeholder="Detalhes da reunião..."
                             rows={3}
-                            className="w-full bg-[#222] border border-white/10 rounded py-3 px-4 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all resize-none"
+                            className="w-full bg-[#222] border border-white/10 rounded py-3 px-4 text-white text-[16px] sm:text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all resize-none"
                         />
                     </div>
 
@@ -284,7 +284,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                                         onChange={e => setParticipantEmail(e.target.value)}
                                         onKeyDown={handleKeyDown}
                                         placeholder="email@exemplo.com"
-                                        className="w-full pl-12 pr-4 py-3 bg-[#222] border border-white/10 rounded text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all"
+                                        className="w-full pl-12 pr-4 py-3 bg-[#222] border border-white/10 rounded text-white text-[16px] sm:text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all"
                                     />
                                 </div>
                                 <button
@@ -327,18 +327,18 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                     </div>
 
                     {/* Actions */}
-                    <div className="flex gap-3 pt-4">
+                    <div className="flex gap-3 pt-4 pb-safe">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 px-4 border border-white/10 text-gray-300 rounded hover:bg-white/5 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-white/20"
+                            className="flex-1 py-3.5 sm:py-3 px-4 border border-white/10 text-gray-300 rounded hover:bg-white/5 active:bg-white/10 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-white/20"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 bg-[#0071eb] hover:bg-[#0056b3] text-white rounded py-3 px-4 font-bold flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#0071eb] disabled:opacity-50 transition-all"
+                            className="flex-1 bg-[#0071eb] hover:bg-[#0056b3] active:bg-[#004494] text-white rounded py-3.5 sm:py-3 px-4 font-bold flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#0071eb] disabled:opacity-50 transition-all"
                         >
                             {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : editMeeting ? 'Salvar' : 'Agendar'}
                         </button>

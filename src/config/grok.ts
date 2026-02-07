@@ -5,5 +5,8 @@ export const GROK_CONFIG = {
 };
 
 export const isGrokConfigured = (): boolean => {
+    // In production, the API key is on the server (serverless proxy).
+    // In dev, check the env var.
+    if (!import.meta.env.DEV) return true;
     return !!GROK_CONFIG.apiKey && GROK_CONFIG.apiKey !== 'undefined';
 };

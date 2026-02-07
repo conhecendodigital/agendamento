@@ -140,18 +140,21 @@ export class GrokService {
         ];
 
         try {
-            const response = await fetch(GROK_CONFIG.apiUrl, {
+            // Use serverless proxy to avoid CORS and keep API key server-side
+            const proxyUrl = import.meta.env.DEV
+                ? 'http://localhost:5173/api/grok'  // Vite proxy in dev
+                : '/api/grok';                       // Vercel serverless in prod
+
+            const response = await fetch(proxyUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
-                    'Authorization': `Bearer ${GROK_CONFIG.apiKey}`,
                 },
                 body: JSON.stringify({
                     model: GROK_CONFIG.model,
                     messages,
                     temperature: 0.6,
                     max_tokens: 800,
-                    stream: false,
                 }),
             });
 

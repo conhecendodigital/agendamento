@@ -1,6 +1,6 @@
 export const GROK_CONFIG = {
     apiUrl: 'https://api.x.ai/v1/chat/completions',
-    model: 'grok-beta',
+    model: 'grok-3',
     apiKey: import.meta.env.VITE_XAI_API_KEY,
 };
 

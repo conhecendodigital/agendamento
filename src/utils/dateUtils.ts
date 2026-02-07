@@ -10,24 +10,24 @@ export const getCalendarDays = (year: number, month: number): Date[] => {
   const firstDay = new Date(year, month, 1);
   const lastDay = new Date(year, month + 1, 0);
   const days: Date[] = [];
-  
+
   // Add days from previous month
   const firstDayOfWeek = firstDay.getDay();
   for (let i = firstDayOfWeek - 1; i >= 0; i--) {
     days.push(new Date(year, month, -i));
   }
-  
+
   // Add days of current month
   for (let i = 1; i <= lastDay.getDate(); i++) {
     days.push(new Date(year, month, i));
   }
-  
+
   // Add days from next month to complete the grid (6 rows x 7 cols = 42)
   const remainingDays = 42 - days.length;
   for (let i = 1; i <= remainingDays; i++) {
     days.push(new Date(year, month + 1, i));
   }
-  
+
   return days;
 };
 
@@ -35,11 +35,11 @@ export const getWeekDays = (date: Date): Date[] => {
   const day = date.getDay();
   const diff = date.getDate() - day;
   const days: Date[] = [];
-  
+
   for (let i = 0; i < 7; i++) {
     days.push(new Date(date.getFullYear(), date.getMonth(), diff + i));
   }
-  
+
   return days;
 };
 
@@ -65,8 +65,8 @@ export const toDateString = (date: Date): string => {
 export const isToday = (date: Date): boolean => {
   const today = new Date();
   return date.getDate() === today.getDate() &&
-         date.getMonth() === today.getMonth() &&
-         date.getFullYear() === today.getFullYear();
+    date.getMonth() === today.getMonth() &&
+    date.getFullYear() === today.getFullYear();
 };
 
 export const formatTime = (time: string): string => {
@@ -100,4 +100,31 @@ export const getMeetingHeight = (startTime: string, endTime: string): number => 
   const [endH, endM] = endTime.split(':').map(Number);
   const durationMinutes = (endH * 60 + endM) - (startH * 60 + startM);
   return (durationMinutes / 1440) * 100;
+};
+
+// ===== Date helpers for stats =====
+
+export const startOfWeek = (d: Date): Date => {
+  const date = new Date(d);
+  const day = date.getDay();
+  date.setDate(date.getDate() - day);
+  date.setHours(0, 0, 0, 0);
+  return date;
+};
+
+export const endOfWeek = (d: Date): Date => {
+  const start = startOfWeek(d);
+  start.setDate(start.getDate() + 6);
+  start.setHours(23, 59, 59, 999);
+  return start;
+};
+
+export const startOfMonth = (d: Date): Date => {
+  return new Date(d.getFullYear(), d.getMonth(), 1);
+};
+
+export const addDays = (d: Date, days: number): Date => {
+  const result = new Date(d);
+  result.setDate(result.getDate() + days);
+  return result;
 };

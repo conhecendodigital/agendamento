@@ -1,8 +1,9 @@
-import React, { useState } from 'react';
-import { LogOut, Plus, Calendar, Clock, Users, CalendarCheck, Loader2, MessageSquare, ChevronLeft, ChevronRight, Menu, X as XIcon } from 'lucide-react';
+import React, { useState, useMemo } from 'react';
+import { LogOut, Plus, Calendar, Clock, Users, CalendarCheck, Loader2, MessageSquare, ChevronLeft, ChevronRight, Menu, X as XIcon, BarChart3 } from 'lucide-react';
 import { LionLogo } from './LionLogo';
 import { Calendar as CalendarComponent } from './Calendar';
 import { ChatPanel } from './ChatPanel';
+import { DetailedStatsPanel } from './DetailedStatsPanel';
 import { MeetingModal } from './MeetingModal';
 import { MeetingDetailsModal } from './MeetingDetailsModal';
 import { useToast } from './Toast';
@@ -10,8 +11,9 @@ import { useAuth } from '../hooks/useAuth';
 import { useMeetings } from '../hooks/useMeetings';
 import type { Meeting } from '../hooks/useMeetings';
 import { sendWebhook } from '../utils/webhook';
-import { formatDateBR, formatTime } from '../utils/dateUtils';
+import { formatTime } from '../utils/dateUtils';
 import { getRandomPhrase } from '../utils/motivationalPhrases';
+import { calculateDetailedStats } from '../utils/statsCalculator';
 
 export const Dashboard: React.FC = () => {
     const { user, signOut } = useAuth();
@@ -25,9 +27,13 @@ export const Dashboard: React.FC = () => {
     const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
     const [prefilledTime, setPrefilledTime] = useState<string | null>(null);
     const [loggingOut, setLoggingOut] = useState(false);
-    const [activeTab, setActiveTab] = useState<'calendar' | 'chat'>('calendar');
+    const [activeTab, setActiveTab] = useState<'chat' | 'calendar'>('chat'); // Chat as default
     const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [showMobileStats, setShowMobileStats] = useState(false);
+
+    // Detailed stats
+    const detailedStats = useMemo(() => calculateDetailedStats(meetings), [meetings]);
 
     const handleLogout = async () => {
         setLoggingOut(true);
@@ -176,25 +182,6 @@ export const Dashboard: React.FC = () => {
                                 </div>
                             ))}
                         </div>
-                        {/* Upcoming */}
-                        {upcomingMeetings.length > 0 && (
-                            <div className="p-3 border-b border-white/5 max-h-48 overflow-y-auto">
-                                <p className="text-[10px] uppercase tracking-widest text-gray-600 font-semibold mb-2 px-1">Próximos</p>
-                                {upcomingMeetings.slice(0, 3).map(m => (
-                                    <button
-                                        key={m.id}
-                                        onClick={() => { handleMeetingClick(m); setMobileMenuOpen(false); }}
-                                        className="w-full text-left px-2 py-2 rounded-lg active:bg-white/10 transition-all"
-                                    >
-                                        <p className="text-sm text-gray-300 truncate">{m.title}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[11px] text-gray-600">{formatDateBR(new Date(m.date + 'T12:00:00'))}</span>
-                                            <span className="text-[11px] text-[#0071eb]">{formatTime(m.start_time)}</span>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
                         {/* Logout */}
                         <div className="p-3">
                             <button
@@ -233,31 +220,31 @@ export const Dashboard: React.FC = () => {
                     </button>
                 </div>
 
-                {/* Navigation */}
+                {/* Navigation — Chat first */}
                 <nav className="px-3 space-y-1 flex-shrink-0">
-                    <button
-                        onClick={() => setActiveTab('calendar')}
-                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'calendar'
-                                ? 'bg-white/10 text-white'
-                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
-                            } ${sidebarCollapsed ? 'justify-center' : ''}`}
-                    >
-                        <Calendar className="w-5 h-5 flex-shrink-0" />
-                        {!sidebarCollapsed && <span>Calendário</span>}
-                    </button>
                     <button
                         onClick={() => setActiveTab('chat')}
                         className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'chat'
-                                ? 'bg-white/10 text-white'
-                                : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
                             } ${sidebarCollapsed ? 'justify-center' : ''}`}
                     >
                         <MessageSquare className="w-5 h-5 flex-shrink-0" />
                         {!sidebarCollapsed && <span>Agenda Chat</span>}
                     </button>
+                    <button
+                        onClick={() => setActiveTab('calendar')}
+                        className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all ${activeTab === 'calendar'
+                            ? 'bg-white/10 text-white'
+                            : 'text-gray-400 hover:bg-white/5 hover:text-white'
+                            } ${sidebarCollapsed ? 'justify-center' : ''}`}
+                    >
+                        <Calendar className="w-5 h-5 flex-shrink-0" />
+                        {!sidebarCollapsed && <span>Calendário</span>}
+                    </button>
                 </nav>
 
-                {/* Stats */}
+                {/* Quick Stats (sidebar) */}
                 {!sidebarCollapsed && (
                     <div className="px-3 mt-6 flex-shrink-0">
                         <p className="px-3 text-[10px] uppercase tracking-widest text-gray-600 font-semibold mb-2">Resumo</p>
@@ -278,31 +265,8 @@ export const Dashboard: React.FC = () => {
                     </div>
                 )}
 
-                {/* Upcoming Meetings */}
-                {!sidebarCollapsed && (
-                    <div className="px-3 mt-4 flex-1 overflow-y-auto min-h-0">
-                        <p className="px-3 text-[10px] uppercase tracking-widest text-gray-600 font-semibold mb-2">Próximos</p>
-                        {upcomingMeetings.length === 0 ? (
-                            <p className="text-gray-600 text-xs text-center py-4">Nenhum agendamento</p>
-                        ) : (
-                            <div className="space-y-1">
-                                {upcomingMeetings.map(m => (
-                                    <button
-                                        key={m.id}
-                                        onClick={() => handleMeetingClick(m)}
-                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-white/5 transition-all group"
-                                    >
-                                        <p className="text-sm text-gray-300 truncate group-hover:text-white transition-colors">{m.title}</p>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                            <span className="text-[11px] text-gray-600">{formatDateBR(new Date(m.date + 'T12:00:00'))}</span>
-                                            <span className="text-[11px] text-[#0071eb]">{formatTime(m.start_time)}</span>
-                                        </div>
-                                    </button>
-                                ))}
-                            </div>
-                        )}
-                    </div>
-                )}
+                {/* Spacer */}
+                <div className="flex-1" />
 
                 {/* User + Collapse */}
                 <div className="mt-auto border-t border-white/5 p-3 flex-shrink-0">
@@ -341,10 +305,10 @@ export const Dashboard: React.FC = () => {
                 {/* Desktop Top Bar */}
                 <header className="hidden md:flex h-16 items-center justify-between px-6 border-b border-white/5 bg-[#0a0a0a] flex-shrink-0">
                     <h1 className="text-lg font-semibold text-white flex items-center gap-2">
-                        {activeTab === 'calendar' ? (
-                            <><Calendar className="w-5 h-5 text-[#0071eb]" /> Calendário</>
-                        ) : (
+                        {activeTab === 'chat' ? (
                             <><MessageSquare className="w-5 h-5 text-[#0071eb]" /> Agenda Chat</>
+                        ) : (
+                            <><Calendar className="w-5 h-5 text-[#0071eb]" /> Calendário</>
                         )}
                     </h1>
                     <div className="flex items-center gap-4">
@@ -357,33 +321,72 @@ export const Dashboard: React.FC = () => {
                     </div>
                 </header>
 
-                {/* Content Area */}
+                {/* Content Area — Two columns on desktop */}
                 <div className="flex-1 overflow-auto p-3 sm:p-4 md:p-6">
-                    {activeTab === 'calendar' ? (
-                        <CalendarComponent
-                            meetings={meetings}
-                            onDateSelect={handleDateSelect}
-                            onMeetingClick={handleMeetingClick}
-                        />
-                    ) : (
-                        <ChatPanel
-                            organizerName={user?.user_metadata.full_name || 'Usuário'}
-                            onConfirmSchedule={handleConfirmSchedule}
-                        />
-                    )}
+                    {/* Mobile: Stats toggle button */}
+                    <div className="lg:hidden mb-4">
+                        <button
+                            onClick={() => setShowMobileStats(!showMobileStats)}
+                            className="w-full flex items-center justify-center gap-2 py-3 bg-[#141414] border border-white/5 rounded-xl text-gray-300 text-sm font-medium active:bg-[#222] transition-all"
+                        >
+                            <BarChart3 className="w-4 h-4 text-[#0071eb]" />
+                            {showMobileStats ? 'Ocultar Estatísticas' : 'Ver Estatísticas Detalhadas'}
+                        </button>
+                        {showMobileStats && (
+                            <div className="mt-4 animate-fadeIn">
+                                <DetailedStatsPanel
+                                    stats={detailedStats}
+                                    meetings={meetings}
+                                    upcomingMeetings={upcomingMeetings}
+                                    onMeetingClick={handleMeetingClick}
+                                />
+                            </div>
+                        )}
+                    </div>
+
+                    <div className="flex flex-col lg:flex-row gap-6">
+                        {/* LEFT: Chat or Calendar */}
+                        <div className="flex-1 min-w-0">
+                            {activeTab === 'chat' ? (
+                                <ChatPanel
+                                    organizerName={user?.user_metadata.full_name || 'Usuário'}
+                                    onConfirmSchedule={handleConfirmSchedule}
+                                />
+                            ) : (
+                                <CalendarComponent
+                                    meetings={meetings}
+                                    onDateSelect={handleDateSelect}
+                                    onMeetingClick={handleMeetingClick}
+                                />
+                            )}
+                        </div>
+
+                        {/* RIGHT: Detailed Stats Panel (desktop only) */}
+                        <div className="hidden lg:block w-80 xl:w-96 flex-shrink-0">
+                            <div className="sticky top-4 space-y-4 max-h-[calc(100dvh-120px)] overflow-y-auto no-scrollbar">
+                                <DetailedStatsPanel
+                                    stats={detailedStats}
+                                    meetings={meetings}
+                                    upcomingMeetings={upcomingMeetings}
+                                    onMeetingClick={handleMeetingClick}
+                                />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </main>
 
             {/* ===== MOBILE: Bottom Tab Bar ===== */}
             <nav className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-[#111111]/95 backdrop-blur-md border-t border-white/5 safe-area-bottom">
                 <div className="flex items-stretch h-16">
+                    {/* Chat first on mobile */}
                     <button
-                        onClick={() => setActiveTab('calendar')}
-                        className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors active:bg-white/5 ${activeTab === 'calendar' ? 'text-[#0071eb]' : 'text-gray-500'
+                        onClick={() => setActiveTab('chat')}
+                        className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors active:bg-white/5 ${activeTab === 'chat' ? 'text-[#0071eb]' : 'text-gray-500'
                             }`}
                     >
-                        <Calendar className="w-5 h-5" />
-                        <span className="text-[10px] font-medium">Calendário</span>
+                        <MessageSquare className="w-5 h-5" />
+                        <span className="text-[10px] font-medium">Chat</span>
                     </button>
                     <button
                         onClick={openNewMeeting}
@@ -394,12 +397,12 @@ export const Dashboard: React.FC = () => {
                         </div>
                     </button>
                     <button
-                        onClick={() => setActiveTab('chat')}
-                        className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors active:bg-white/5 ${activeTab === 'chat' ? 'text-[#0071eb]' : 'text-gray-500'
+                        onClick={() => setActiveTab('calendar')}
+                        className={`flex-1 flex flex-col items-center justify-center gap-1 transition-colors active:bg-white/5 ${activeTab === 'calendar' ? 'text-[#0071eb]' : 'text-gray-500'
                             }`}
                     >
-                        <MessageSquare className="w-5 h-5" />
-                        <span className="text-[10px] font-medium">Chat</span>
+                        <Calendar className="w-5 h-5" />
+                        <span className="text-[10px] font-medium">Calendário</span>
                     </button>
                 </div>
             </nav>

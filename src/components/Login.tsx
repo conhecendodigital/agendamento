@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Mail, Lock, User, Loader2, ArrowRight } from 'lucide-react';
+import { Mail, Lock, User, Loader2, ArrowRight, Eye, EyeOff } from 'lucide-react';
 import { LionLogo } from './LionLogo';
 import { useToast } from './Toast';
 import { useAuth } from '../hooks/useAuth';
@@ -13,44 +13,60 @@ interface FormData {
     fullName: string;
 }
 
+interface InputFieldProps {
+    icon: React.ElementType;
+    label?: string;
+    error?: string;
+    toggle?: React.ReactNode;
+    [key: string]: any;
+}
+
+// Netflix Style Input Field - OUTSIDE component to prevent focus loss
+const InputField: React.FC<InputFieldProps> = ({ icon: Icon, label, error, toggle, ...props }) => (
+    <div className="space-y-2 w-full">
+        {label && <label className="text-xs font-medium text-gray-400 uppercase tracking-wider ml-1">{label}</label>}
+        <div className="relative w-full group">
+            <div className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-500 group-focus-within:text-[#0071eb] transition-colors pointer-events-none z-10">
+                <Icon className="w-5 h-5" />
+            </div>
+            <input
+                {...props}
+                className={`
+                    w-full bg-[#333] border-0 rounded text-white py-4 pl-12 pr-10
+                    placeholder-gray-500 outline-none transition-all duration-200
+                    focus:ring-2 focus:ring-[#0071eb] focus:bg-[#454545]
+                    ${error ? 'ring-2 ring-[#e50914]' : ''}
+                `}
+            />
+            {toggle && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 z-20">
+                    {toggle}
+                </div>
+            )}
+        </div>
+        {error && <span className="text-xs text-[#e50914] ml-1">{error}</span>}
+    </div>
+);
+
 export const Login: React.FC = () => {
     const [mode, setMode] = useState<AuthMode>('login');
-    const [formData, setFormData] = useState<FormData>({
-        email: '',
-        password: '',
-        confirmPassword: '',
-        fullName: '',
-    });
+    const [formData, setFormData] = useState<FormData>({ email: '', password: '', confirmPassword: '', fullName: '' });
     const [errors, setErrors] = useState<Partial<FormData>>({});
     const [loading, setLoading] = useState(false);
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
     const { signIn, signUp } = useAuth();
     const { showToast } = useToast();
 
     const validateForm = (): boolean => {
         const newErrors: Partial<FormData> = {};
-
-        if (!formData.email) {
-            newErrors.email = 'Email é obrigatório';
-        } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
-            newErrors.email = 'Email inválido';
-        }
-
-        if (!formData.password) {
-            newErrors.password = 'Senha é obrigatória';
-        } else if (formData.password.length < 6) {
-            newErrors.password = 'Mínimo 6 caracteres';
-        }
-
+        if (!formData.email) newErrors.email = 'Email obrigatório';
+        if (!formData.password || formData.password.length < 6) newErrors.password = 'Mínimo 6 caracteres';
         if (mode === 'register') {
-            if (!formData.fullName) {
-                newErrors.fullName = 'Nome é obrigatório';
-            }
-            if (formData.password !== formData.confirmPassword) {
-                newErrors.confirmPassword = 'Senhas não conferem';
-            }
+            if (!formData.fullName) newErrors.fullName = 'Nome obrigatório';
+            if (formData.password !== formData.confirmPassword) newErrors.confirmPassword = 'Senhas não conferem';
         }
-
         setErrors(newErrors);
         return Object.keys(newErrors).length === 0;
     };
@@ -58,230 +74,142 @@ export const Login: React.FC = () => {
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!validateForm()) return;
-
         setLoading(true);
-
         try {
             if (mode === 'login') {
                 await signIn(formData.email, formData.password);
-                showToast('success', 'Login realizado com sucesso!');
+                showToast('success', 'Login realizado!');
             } else {
                 await signUp(formData.email, formData.password, formData.fullName);
-                showToast('success', 'Conta criada! Verifique seu email para confirmar.');
+                showToast('success', 'Conta criada!');
             }
-        } catch (error) {
-            const message = error instanceof Error ? error.message : 'Erro ao processar';
-            showToast('error', message);
-        } finally {
-            setLoading(false);
-        }
+        } catch { showToast('error', 'Erro na autenticação.'); }
+        finally { setLoading(false); }
     };
 
     const handleInputChange = (field: keyof FormData) => (e: React.ChangeEvent<HTMLInputElement>) => {
         setFormData((prev) => ({ ...prev, [field]: e.target.value }));
-        if (errors[field]) {
-            setErrors((prev) => ({ ...prev, [field]: undefined }));
-        }
-    };
-
-    const switchMode = (newMode: AuthMode) => {
-        setMode(newMode);
-        setErrors({});
+        if (errors[field]) setErrors((prev) => ({ ...prev, [field]: undefined }));
     };
 
     return (
-        <div className="min-h-screen flex items-center justify-center p-4 relative overflow-hidden">
-            {/* Background with radial gradient */}
-            <div className="absolute inset-0 bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950" />
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-black relative overflow-hidden">
+            {/* Netflix-style Background Gradient */}
+            <div className="absolute inset-0 bg-gradient-to-b from-black/60 via-black/40 to-black pointer-events-none" />
 
-            {/* Grid pattern overlay */}
-            <div className="absolute inset-0 bg-grid-pattern opacity-50" />
+            {/* Subtle Blue Glow */}
+            <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-[#0071eb]/10 rounded-full blur-[150px] pointer-events-none" />
 
-            {/* Radial glow behind card */}
-            <div className="absolute inset-0 bg-radial-glow" />
+            {/* Login Card - Netflix Style */}
+            <div className="relative w-full max-w-md z-10 animate-fadeInUp">
+                <div className="bg-black/80 backdrop-blur-sm rounded-lg p-8 sm:p-12 shadow-2xl">
 
-            {/* Floating particles effect */}
-            <div className="absolute inset-0 overflow-hidden pointer-events-none">
-                <div className="absolute w-1 h-1 bg-amber-500/40 rounded-full top-1/4 left-1/4 animate-pulse" style={{ animationDelay: '0s' }} />
-                <div className="absolute w-1.5 h-1.5 bg-amber-500/30 rounded-full top-1/3 right-1/3 animate-pulse" style={{ animationDelay: '0.5s' }} />
-                <div className="absolute w-1 h-1 bg-amber-500/50 rounded-full bottom-1/4 left-1/3 animate-pulse" style={{ animationDelay: '1s' }} />
-                <div className="absolute w-2 h-2 bg-amber-500/20 rounded-full top-1/2 right-1/4 animate-pulse" style={{ animationDelay: '1.5s' }} />
-                <div className="absolute w-1 h-1 bg-amber-500/40 rounded-full bottom-1/3 right-1/2 animate-pulse" style={{ animationDelay: '2s' }} />
-            </div>
-
-            {/* Login Card */}
-            <div className="relative w-full max-w-md animate-fadeInUp">
-                {/* Card glow effect */}
-                <div className="absolute -inset-1 bg-gradient-to-r from-amber-500/20 via-amber-500/10 to-amber-500/20 rounded-3xl blur-xl opacity-50" />
-
-                <div className="relative glass-strong rounded-3xl p-8 sm:p-10">
-                    {/* Top decorative line */}
-                    <div className="absolute top-0 left-8 right-8 h-px bg-gradient-to-r from-transparent via-amber-500/50 to-transparent" />
-
-                    {/* Logo and Title */}
-                    <div className="text-center mb-8">
-                        <div className="inline-block mb-4 group">
-                            <div className="relative">
-                                <LionLogo
-                                    size={72}
-                                    className="text-amber-500 mx-auto animate-breathe transition-all duration-500 group-hover:drop-shadow-[0_0_20px_rgba(245,158,11,0.5)]"
-                                />
-                                {/* Glow ring on hover */}
-                                <div className="absolute inset-0 rounded-full bg-amber-500/10 scale-110 opacity-0 group-hover:opacity-100 transition-opacity duration-500 blur-xl" />
-                            </div>
+                    {/* Header */}
+                    <div className="text-center mb-10">
+                        <div className="inline-flex justify-center items-center p-4 mb-4 rounded-full bg-[#0071eb]/10">
+                            <LionLogo size={56} className="text-[#0071eb]" />
                         </div>
-                        <h1 className="text-3xl font-bold text-gradient-gold mb-2 tracking-tight">
-                            Valento Academy
-                        </h1>
-                        <p className="text-slate-400 text-sm tracking-widest uppercase">
-                            Sistema de Agendamentos
-                        </p>
+                        <h1 className="text-3xl font-bold text-white tracking-tight">Valento <span className="text-[#0071eb]">Academy</span></h1>
+                        <p className="text-gray-400 text-sm mt-2">Sistema de Agendamento</p>
                     </div>
 
-                    {/* Tabs */}
-                    <div className="flex mb-8 relative">
-                        <div className="absolute bottom-0 left-0 right-0 h-px bg-slate-700/50" />
+                    {/* Tabs - Netflix Style */}
+                    <div className="flex bg-[#141414] p-1 rounded-lg mb-8">
                         <button
-                            type="button"
-                            onClick={() => switchMode('login')}
-                            className={`flex-1 py-3 text-sm font-medium transition-all relative ${mode === 'login'
-                                ? 'text-amber-500'
-                                : 'text-slate-400 hover:text-slate-300'
+                            onClick={() => setMode('login')}
+                            className={`flex-1 py-3 text-sm font-semibold rounded transition-all ${mode === 'login'
+                                    ? 'bg-[#0071eb] text-white shadow-lg'
+                                    : 'text-gray-400 hover:text-white'
                                 }`}
                         >
                             Entrar
-                            {mode === 'login' && (
-                                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full" />
-                            )}
                         </button>
                         <button
-                            type="button"
-                            onClick={() => switchMode('register')}
-                            className={`flex-1 py-3 text-sm font-medium transition-all relative ${mode === 'register'
-                                ? 'text-amber-500'
-                                : 'text-slate-400 hover:text-slate-300'
+                            onClick={() => setMode('register')}
+                            className={`flex-1 py-3 text-sm font-semibold rounded transition-all ${mode === 'register'
+                                    ? 'bg-[#0071eb] text-white shadow-lg'
+                                    : 'text-gray-400 hover:text-white'
                                 }`}
                         >
-                            Cadastrar
-                            {mode === 'register' && (
-                                <div className="absolute bottom-0 left-4 right-4 h-0.5 bg-gradient-to-r from-amber-500 to-amber-600 rounded-full" />
-                            )}
+                            Criar Conta
                         </button>
                     </div>
 
-                    {/* Form */}
                     <form onSubmit={handleSubmit} className="space-y-5">
                         {mode === 'register' && (
-                            <div className="animate-fadeIn">
-                                <label htmlFor="fullName" className="block text-sm font-medium text-amber-500/80 mb-1.5">
-                                    Nome completo
-                                </label>
-                                <div className="relative group">
-                                    <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
-                                    <input
-                                        type="text"
-                                        id="fullName"
-                                        value={formData.fullName}
-                                        onChange={handleInputChange('fullName')}
-                                        placeholder="Seu nome"
-                                        className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.fullName ? 'border-red-500/50' : ''
-                                            }`}
-                                    />
-                                </div>
-                                {errors.fullName && (
-                                    <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.fullName}</p>
-                                )}
-                            </div>
+                            <InputField
+                                label="Nome Completo"
+                                icon={User}
+                                placeholder="Seu nome"
+                                value={formData.fullName}
+                                onChange={handleInputChange('fullName')}
+                                error={errors.fullName}
+                            />
                         )}
 
-                        <div>
-                            <label htmlFor="email" className="block text-sm font-medium text-amber-500/80 mb-1.5">
-                                Email
-                            </label>
-                            <div className="relative group">
-                                <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
-                                <input
-                                    type="email"
-                                    id="email"
-                                    value={formData.email}
-                                    onChange={handleInputChange('email')}
-                                    placeholder="seu@email.com"
-                                    className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.email ? 'border-red-500/50' : ''
-                                        }`}
-                                />
-                            </div>
-                            {errors.email && (
-                                <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.email}</p>
-                            )}
-                        </div>
+                        <InputField
+                            label="Email"
+                            icon={Mail}
+                            placeholder="seu@email.com"
+                            type="email"
+                            value={formData.email}
+                            onChange={handleInputChange('email')}
+                            error={errors.email}
+                        />
 
-                        <div>
-                            <label htmlFor="password" className="block text-sm font-medium text-amber-500/80 mb-1.5">
-                                Senha
-                            </label>
-                            <div className="relative group">
-                                <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
-                                <input
-                                    type="password"
-                                    id="password"
-                                    value={formData.password}
-                                    onChange={handleInputChange('password')}
-                                    placeholder="••••••••"
-                                    className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.password ? 'border-red-500/50' : ''
-                                        }`}
-                                />
-                            </div>
-                            {errors.password && (
-                                <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.password}</p>
-                            )}
-                        </div>
+                        <InputField
+                            label="Senha"
+                            icon={Lock}
+                            placeholder="••••••••"
+                            type={showPassword ? 'text' : 'password'}
+                            value={formData.password}
+                            onChange={handleInputChange('password')}
+                            error={errors.password}
+                            toggle={
+                                <button
+                                    type="button"
+                                    onClick={() => setShowPassword(!showPassword)}
+                                    className="p-1 text-gray-500 hover:text-[#0071eb] transition-colors"
+                                >
+                                    {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                </button>
+                            }
+                        />
 
                         {mode === 'register' && (
-                            <div className="animate-fadeIn">
-                                <label htmlFor="confirmPassword" className="block text-sm font-medium text-amber-500/80 mb-1.5">
-                                    Confirmar senha
-                                </label>
-                                <div className="relative group">
-                                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500 transition-colors group-focus-within:text-amber-500" />
-                                    <input
-                                        type="password"
-                                        id="confirmPassword"
-                                        value={formData.confirmPassword}
-                                        onChange={handleInputChange('confirmPassword')}
-                                        placeholder="••••••••"
-                                        className={`w-full input-premium rounded-xl py-3.5 pl-12 pr-4 text-white transition-all ${errors.confirmPassword ? 'border-red-500/50' : ''
-                                            }`}
-                                    />
-                                </div>
-                                {errors.confirmPassword && (
-                                    <p className="text-red-400 text-xs mt-1.5 ml-1">{errors.confirmPassword}</p>
-                                )}
-                            </div>
+                            <InputField
+                                label="Confirmar Senha"
+                                icon={Lock}
+                                placeholder="••••••••"
+                                type={showConfirmPassword ? 'text' : 'password'}
+                                value={formData.confirmPassword}
+                                onChange={handleInputChange('confirmPassword')}
+                                error={errors.confirmPassword}
+                                toggle={
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                        className="p-1 text-gray-500 hover:text-[#0071eb] transition-colors"
+                                    >
+                                        {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                }
+                            />
                         )}
 
                         <button
                             type="submit"
                             disabled={loading}
-                            className="w-full btn-primary py-4 rounded-xl text-slate-900 font-bold text-sm tracking-wide flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed mt-8"
+                            className="w-full bg-[#0071eb] hover:bg-[#0056b3] text-white font-bold py-4 rounded transition-all duration-200 flex items-center justify-center gap-2 disabled:opacity-50 mt-6 hover:scale-[1.02]"
                         >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Processando...
-                                </>
-                            ) : (
-                                <>
-                                    {mode === 'login' ? 'Entrar' : 'Criar conta'}
-                                    <ArrowRight className="w-5 h-5" />
-                                </>
-                            )}
+                            {loading ? <Loader2 className="w-5 h-5 animate-spin" /> : <>{mode === 'login' ? 'Entrar' : 'Criar Conta'} <ArrowRight className="w-5 h-5" /></>}
                         </button>
                     </form>
 
-                    {/* Bottom decorative element */}
+                    {/* Netflix-style Footer */}
                     <div className="mt-8 text-center">
-                        <p className="text-slate-500 text-xs">
-                            © {new Date().getFullYear()} Valento Academy
+                        <p className="text-gray-500 text-xs">
+                            Ao continuar, você concorda com nossos Termos de Uso.
                         </p>
                     </div>
                 </div>

@@ -1,26 +1,71 @@
-@import "tailwindcss";
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
 
-/* ========================================
-   VALENTO ACADEMY — PREMIUM THEME
-   ======================================== */
-
-/* CSS Custom Properties */
+/* Netflix Style Theme - Black, White & Blue */
 :root {
-  --color-amber-400: #fbbf24;
-  --color-amber-500: #f59e0b;
-  --color-amber-600: #d97706;
-  --color-slate-900: #0f172a;
-  --color-slate-800: #1e293b;
-  --color-slate-700: #334155;
-  --glow-amber: rgba(245, 158, 11, 0.15);
-  --glow-amber-strong: rgba(245, 158, 11, 0.4);
+  /* Netflix-inspired colors with Blue accent */
+  --netflix-black: #000000;
+  --netflix-dark: #141414;
+  --netflix-darker: #0f0f0f;
+  --netflix-gray: #808080;
+  --netflix-light-gray: #b3b3b3;
+  --netflix-white: #ffffff;
+  --netflix-blue: #0071eb;
+  --netflix-blue-hover: #0056b3;
+  --netflix-blue-glow: rgba(0, 113, 235, 0.4);
+
+  /* Status colors */
+  --status-success: #46d369;
+  --status-error: #e50914;
+  --status-warning: #f5c518;
+
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-blue: 0 0 20px rgba(0, 113, 235, 0.3);
+
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* shadcn variables */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 210 100% 46%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 13%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 13%;
+  --muted-foreground: 0 0% 50%;
+  --accent: 0 0% 13%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 47%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
+  --ring: 210 100% 46%;
+  --radius: 0.5rem;
 }
 
-/* Base Styles */
+/* Netflix Sans Font Fallback */
+@font-face {
+  font-family: 'Netflix Sans';
+  src: local('Helvetica Neue'), local('Helvetica'), local('Arial');
+  font-weight: 400;
+}
+
 * {
+  box-sizing: border-box;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 html {
@@ -28,694 +73,179 @@ html {
 }
 
 body {
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+  font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background-color: var(--netflix-black);
+  color: var(--netflix-white);
   min-height: 100vh;
-  color: #e2e8f0;
+  line-height: 1.5;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ========================================
-   GRADIENT TEXT UTILITIES
-   ======================================== */
-
-.text-gradient-gold {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.text-gradient-gold-subtle {
-  background: linear-gradient(135deg, #fcd34d 0%, #fbbf24 50%, #f59e0b 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-/* ========================================
-   GLASSMORPHISM
-   ======================================== */
-
-.glass {
-  background: rgba(30, 41, 59, 0.5);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid rgba(245, 158, 11, 0.08);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-}
-
-.glass:hover {
-  border-color: rgba(245, 158, 11, 0.15);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4), 0 0 0 1px rgba(245, 158, 11, 0.05);
-}
-
-.glass-dark {
-  background: rgba(15, 23, 42, 0.8);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border-bottom: 1px solid rgba(245, 158, 11, 0.1);
-}
-
-.glass-strong {
-  background: rgba(30, 41, 59, 0.7);
-  backdrop-filter: blur(24px);
-  -webkit-backdrop-filter: blur(24px);
-  border: 1px solid rgba(245, 158, 11, 0.12);
-  box-shadow:
-    0 0 80px rgba(245, 158, 11, 0.05),
-    0 25px 50px -12px rgba(0, 0, 0, 0.5);
-}
-
-/* ========================================
-   GLOW EFFECTS
-   ======================================== */
-
-.glow-amber {
-  box-shadow: 0 0 20px rgba(245, 158, 11, 0.15), 0 0 60px rgba(245, 158, 11, 0.05);
-}
-
-.glow-amber-strong {
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4), 0 0 40px rgba(245, 158, 11, 0.15);
-}
-
-.glow-amber-border {
-  box-shadow: 0 0 0 1px rgba(245, 158, 11, 0.3), 0 0 20px rgba(245, 158, 11, 0.1);
-}
-
-/* ========================================
-   BUTTONS
-   ======================================== */
-
-.btn-primary {
-  background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 50%, #d97706 100%);
-  background-size: 200% auto;
-  color: #0f172a;
-  font-weight: 700;
-  transition: all 0.3s ease;
-  position: relative;
-  overflow: hidden;
-}
-
-.btn-primary::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg,
-      transparent,
-      rgba(255, 255, 255, 0.3),
-      transparent);
-  transition: left 0.5s ease;
-}
-
-.btn-primary:hover {
-  background-position: right center;
-  box-shadow: 0 0 30px rgba(245, 158, 11, 0.4), 0 10px 40px rgba(245, 158, 11, 0.2);
-  transform: translateY(-1px);
-}
-
-.btn-primary:hover::before {
-  left: 100%;
-}
-
-.btn-primary:active {
-  transform: translateY(0);
-}
-
-/* ========================================
-   CARD STYLES
-   ======================================== */
-
-.card-hover {
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.card-hover:hover {
-  transform: translateY(-2px);
-  border-color: rgba(245, 158, 11, 0.2);
-  box-shadow: 0 0 30px rgba(245, 158, 11, 0.08), 0 20px 40px rgba(0, 0, 0, 0.3);
-}
-
-/* ========================================
-   INPUT STYLES
-   ======================================== */
-
-.input-premium {
-  background: rgba(15, 23, 42, 0.7);
-  border: 1px solid rgba(51, 65, 85, 0.5);
-  transition: all 0.3s ease;
-}
-
-.input-premium:focus {
-  border-color: rgba(245, 158, 11, 0.5);
-  box-shadow: 0 0 0 3px rgba(245, 158, 11, 0.1), 0 0 20px rgba(245, 158, 11, 0.05);
-  outline: none;
-}
-
-.input-premium::placeholder {
-  color: rgba(148, 163, 184, 0.6);
-}
-
-/* ========================================
-   ANIMATIONS — KEYFRAMES
-   ======================================== */
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-
-  to {
-    opacity: 1;
-  }
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes scaleIn {
-  from {
-    opacity: 0;
-    transform: scale(0.9);
-  }
-
-  to {
-    opacity: 1;
-    transform: scale(1);
-  }
-}
-
-@keyframes slideInRight {
-  from {
-    opacity: 0;
-    transform: translateX(100px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateX(0);
-  }
-}
-
-@keyframes slideOutUp {
-  from {
-    opacity: 1;
-    transform: translateY(0);
-  }
-
-  to {
-    opacity: 0;
-    transform: translateY(-20px);
-  }
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% center;
-  }
-
-  100% {
-    background-position: 200% center;
-  }
-}
-
-@keyframes pulse-ring {
-  0% {
-    transform: scale(1);
-    opacity: 0.6;
-  }
-
-  100% {
-    transform: scale(1.8);
-    opacity: 0;
-  }
-}
-
-@keyframes pulse-glow {
-
-  0%,
-  100% {
-    box-shadow: 0 0 12px rgba(245, 158, 11, 0.3);
-  }
-
-  50% {
-    box-shadow: 0 0 24px rgba(245, 158, 11, 0.5);
-  }
-}
-
-@keyframes breathe {
-
-  0%,
-  100% {
-    transform: scale(1);
-  }
-
-  50% {
-    transform: scale(1.02);
-  }
-}
-
-@keyframes float-particle {
-
-  0%,
-  100% {
-    transform: translateY(0) translateX(0);
-    opacity: 0;
-  }
-
-  10% {
-    opacity: 0.6;
-  }
-
-  90% {
-    opacity: 0.6;
-  }
-
-  50% {
-    transform: translateY(-100px) translateX(20px);
-  }
-}
-
-@keyframes border-glow {
-
-  0%,
-  100% {
-    border-color: rgba(245, 158, 11, 0.2);
-  }
-
-  50% {
-    border-color: rgba(245, 158, 11, 0.5);
-  }
-}
-
-@keyframes progress-countdown {
-  from {
-    width: 100%;
-  }
-
-  to {
-    width: 0%;
-  }
-}
-
-@keyframes slideIndicator {
-  from {
-    transform: translateX(var(--from-x, 0));
-  }
-
-  to {
-    transform: translateX(var(--to-x, 0));
-  }
-}
-
-/* ========================================
-   ANIMATION CLASSES
-   ======================================== */
-
-.animate-fadeIn {
-  animation: fadeIn 0.4s ease-out;
-}
-
-.animate-fadeInUp {
-  animation: fadeInUp 0.5s ease-out;
-}
-
-.animate-scaleIn {
-  animation: scaleIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
-}
-
-.animate-slideInRight {
-  animation: slideInRight 0.4s ease-out;
-}
-
-.animate-slideOutUp {
-  animation: slideOutUp 0.3s ease-out forwards;
-}
-
-.animate-breathe {
-  animation: breathe 3s ease-in-out infinite;
-}
-
-.animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
-}
-
-/* ========================================
-   BACKGROUND PATTERNS
-   ======================================== */
-
-.bg-grid-pattern {
-  background-image:
-    linear-gradient(rgba(245, 158, 11, 0.03) 1px, transparent 1px),
-    linear-gradient(90deg, rgba(245, 158, 11, 0.03) 1px, transparent 1px);
-  background-size: 40px 40px;
-}
-
-.bg-radial-glow {
-  background: radial-gradient(ellipse at center,
-      rgba(245, 158, 11, 0.08) 0%,
-      transparent 60%);
-}
-
-/* ========================================
-   SCROLLBAR STYLING
-   ======================================== */
-
+/* Custom Scrollbar - Netflix Style */
 ::-webkit-scrollbar {
   width: 8px;
   height: 8px;
 }
 
 ::-webkit-scrollbar-track {
-  background: rgba(30, 41, 59, 0.5);
-  border-radius: 4px;
+  background: var(--netflix-dark);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: rgba(100, 116, 139, 0.5);
+  background: #333;
   border-radius: 4px;
-  transition: background 0.2s;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: rgba(148, 163, 184, 0.6);
+  background: #444;
 }
 
-/* ========================================
-   SKELETON LOADING
-   ======================================== */
+@layer components {
 
-.skeleton {
-  background: linear-gradient(90deg,
-      rgba(51, 65, 85, 0.4) 0%,
-      rgba(71, 85, 105, 0.4) 50%,
-      rgba(51, 65, 85, 0.4) 100%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
+  /* Netflix Button Styles */
+  .netflix-btn {
+    @apply px-6 py-3 rounded font-semibold text-sm transition-all duration-200;
+    background-color: var(--netflix-blue);
+    color: var(--netflix-white);
+  }
+
+  .netflix-btn:hover {
+    background-color: var(--netflix-blue-hover);
+    transform: scale(1.02);
+  }
+
+  .netflix-btn-secondary {
+    @apply px-6 py-3 rounded font-semibold text-sm transition-all duration-200;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--netflix-white);
+  }
+
+  .netflix-btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Netflix Card Styles */
+  .netflix-card {
+    background-color: var(--netflix-dark);
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+  }
+
+  .netflix-card:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-blue);
+  }
+
+  /* Netflix Input Styles */
+  .netflix-input {
+    @apply w-full px-4 py-3 rounded text-white text-sm transition-all duration-200;
+    background-color: #333;
+    border: 1px solid transparent;
+  }
+
+  .netflix-input:focus {
+    outline: none;
+    border-color: var(--netflix-blue);
+    box-shadow: 0 0 0 2px var(--netflix-blue-glow);
+  }
+
+  .netflix-input::placeholder {
+    color: #8c8c8c;
+  }
+
+  /* Netflix Modal Styles */
+  .netflix-modal {
+    background-color: var(--netflix-dark);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Netflix Header Gradient */
+  .netflix-header-gradient {
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  }
+
+  /* Netflix Hero Gradient */
+  .netflix-hero-gradient {
+    background: linear-gradient(to top, var(--netflix-black) 0%, transparent 60%);
+  }
 }
 
-/* ========================================
-   FAB PULSE RING
-   ======================================== */
+@layer utilities {
 
-.fab-ring::before {
-  content: '';
-  position: absolute;
-  inset: -4px;
-  border-radius: 50%;
-  border: 2px solid rgba(245, 158, 11, 0.6);
-  animation: pulse-ring 2s ease-out infinite;
+  /* Animations */
+  @keyframes fadeIn {
+    from {
+      opacity: 0;
+    }
+
+    to {
+      opacity: 1;
+    }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes pulse-blue {
+
+    0%,
+    100% {
+      box-shadow: 0 0 0 0 rgba(0, 113, 235, 0.4);
+    }
+
+    50% {
+      box-shadow: 0 0 0 10px rgba(0, 113, 235, 0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-fadeInUp {
+    animation: fadeInUp 0.4s ease-out;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .animate-pulse-blue {
+    animation: pulse-blue 2s infinite;
+  }
 }
 
-/* ========================================
-   DECORATIVE LINES
-   ======================================== */
-
-.line-gradient-gold {
-  height: 1px;
-  background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(245, 158, 11, 0.3) 20%,
-      rgba(245, 158, 11, 0.5) 50%,
-      rgba(245, 158, 11, 0.3) 80%,
-      transparent 100%);
-}
-
-/* ========================================
-   MEETING STATUS COLORS
-   ======================================== */
-
-.status-scheduled {
-  background: linear-gradient(135deg, rgba(251, 191, 36, 0.15) 0%, rgba(245, 158, 11, 0.1) 100%);
-  border-left: 3px solid #f59e0b;
-}
-
-.status-completed {
-  background: linear-gradient(135deg, rgba(16, 185, 129, 0.15) 0%, rgba(5, 150, 105, 0.1) 100%);
-  border-left: 3px solid #10b981;
-}
-
-.status-cancelled {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.15) 0%, rgba(220, 38, 38, 0.1) 100%);
-  border-left: 3px solid #ef4444;
-  opacity: 0.7;
-}
-
-.status-cancelled .meeting-title {
-  text-decoration: line-through;
-  opacity: 0.6;
-}
-
-/* ========================================
-   TAB INDICATOR
-   ======================================== */
-
-.tab-indicator {
-  position: absolute;
-  bottom: 0;
-  height: 2px;
-  background: linear-gradient(90deg, #fbbf24, #f59e0b);
-  border-radius: 1px;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-/* ========================================
-   TOAST PROGRESS BAR
-   ======================================== */
-
-.toast-progress {
-  position: absolute;
-  bottom: 0;
-  left: 0;
-  height: 3px;
-  border-radius: 0 0 0 8px;
-  animation: progress-countdown 4s linear forwards;
-}
-
-.toast-progress-success {
-  background: linear-gradient(90deg, #10b981, #059669);
-}
-
-.toast-progress-error {
-  background: linear-gradient(90deg, #ef4444, #dc2626);
-}
-
-.toast-progress-warning {
-  background: linear-gradient(90deg, #f59e0b, #d97706);
-}
-
-.toast-progress-info {
-  background: linear-gradient(90deg, #3b82f6, #2563eb);
-}
-
-/* ========================================
-   AVATAR INITIALS
-   ======================================== */
-
-.avatar-initials {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 600;
-  text-transform: uppercase;
-  background: rgba(245, 158, 11, 0.15);
-  color: #fbbf24;
-  border: 1px solid rgba(245, 158, 11, 0.2);
-}
-
-/* ========================================
-   CALENDAR SPECIFIC
-   ======================================== */
-
-.calendar-day-current {
-  background: rgba(245, 158, 11, 0.2);
-  box-shadow: 0 0 12px rgba(245, 158, 11, 0.4), 0 0 24px rgba(245, 158, 11, 0.2);
-}
-
-.calendar-day-hover:hover {
-  background: rgba(51, 65, 85, 0.5);
-  border-color: rgba(245, 158, 11, 0.2);
-}
-
-.calendar-weekend {
-  background: rgba(15, 23, 42, 0.3);
-}
-
-.now-indicator {
-  position: relative;
-}
-
-.now-indicator::before {
-  content: '';
-  position: absolute;
-  left: 0;
-  width: 8px;
-  height: 8px;
-  background: #ef4444;
-  border-radius: 50%;
-  transform: translateX(-50%);
-  animation: pulse-glow 1.5s ease-in-out infinite;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
-}
-
-/* ========================================
-   MODAL DECORATIONS
-   ======================================== */
-
-.modal-header-line {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg,
-      transparent 0%,
-      rgba(245, 158, 11, 0.5) 20%,
-      #f59e0b 50%,
-      rgba(245, 158, 11, 0.5) 80%,
-      transparent 100%);
-  border-radius: 8px 8px 0 0;
-}
-
-/* ========================================
-   UTILITY CLASSES
-   ======================================== */
-
-.tabular-nums {
-  font-variant-numeric: tabular-nums;
-}
-
-.line-clamp-1 {
-  display: -webkit-box;
-  -webkit-line-clamp: 1;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-.line-clamp-2 {
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-
-/* Focus visible for accessibility */
-:focus-visible {
-  outline: 2px solid rgba(245, 158, 11, 0.5);
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--netflix-blue);
   outline-offset: 2px;
 }
 
-/* Selection color */
+/* Selection */
 ::selection {
-  background: rgba(245, 158, 11, 0.3);
-  color: white;
-}
-
-/* ========================================
-   FAB TOOLTIP
-   ======================================== */
-
-.fab-tooltip {
-  position: absolute;
-  right: 100%;
-  top: 50%;
-  transform: translateY(-50%);
-  margin-right: 12px;
-  padding: 6px 12px;
-  background: rgba(30, 41, 59, 0.95);
-  border: 1px solid rgba(245, 158, 11, 0.2);
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 500;
-  color: #fbbf24;
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.2s ease, transform 0.2s ease;
-  transform: translateY(-50%) translateX(8px);
-}
-
-.fab-tooltip::after {
-  content: '';
-  position: absolute;
-  right: -6px;
-  top: 50%;
-  transform: translateY(-50%);
-  border: 6px solid transparent;
-  border-left-color: rgba(30, 41, 59, 0.95);
-}
-
-.fab-container:hover .fab-tooltip {
-  opacity: 1;
-  transform: translateY(-50%) translateX(0);
-}
-
-/* ========================================
-   ICON CIRCLE BACKGROUNDS
-   ======================================== */
-
-.icon-circle {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: rgba(245, 158, 11, 0.1);
-  flex-shrink: 0;
-}
-
-.icon-circle-sm {
-  width: 28px;
-  height: 28px;
-}
-
-/* ========================================
-   WEEKEND CALENDAR CELLS
-   ======================================== */
-
-.calendar-cell-weekend {
-  background: rgba(15, 23, 42, 0.4);
-}
-
-.calendar-cell-weekend:hover {
-  background: rgba(51, 65, 85, 0.4);
-}
-
-/* ========================================
-   TREND INDICATORS
-   ======================================== */
-
-.trend-up {
-  color: #10b981;
-}
-
-.trend-down {
-  color: #ef4444;
-}
-
-/* ========================================
-   CANCELLED MEETING STYLE
-   ======================================== */
-
-.meeting-cancelled {
-  opacity: 0.6;
-}
-
-.meeting-cancelled .meeting-title {
-  text-decoration: line-through;
+  background-color: var(--netflix-blue);
+  color: var(--netflix-white);
 }

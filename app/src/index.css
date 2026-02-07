@@ -1,0 +1,239 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Netflix Style Theme - Black, White & Blue */
+:root {
+  /* Netflix-inspired colors with Blue accent */
+  --netflix-black: #000000;
+  --netflix-dark: #141414;
+  --netflix-darker: #0f0f0f;
+  --netflix-gray: #808080;
+  --netflix-light-gray: #b3b3b3;
+  --netflix-white: #ffffff;
+  --netflix-blue: #0071eb;
+  --netflix-blue-hover: #0056b3;
+  --netflix-blue-glow: rgba(0, 113, 235, 0.4);
+  
+  /* Status colors */
+  --status-success: #46d369;
+  --status-error: #e50914;
+  --status-warning: #f5c518;
+  
+  /* Shadows */
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.4);
+  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.5);
+  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.6);
+  --shadow-blue: 0 0 20px rgba(0, 113, 235, 0.3);
+  
+  /* Border radius */
+  --radius-sm: 4px;
+  --radius-md: 8px;
+  --radius-lg: 12px;
+  --radius-xl: 16px;
+
+  /* shadcn variables */
+  --background: 0 0% 0%;
+  --foreground: 0 0% 100%;
+  --card: 0 0% 8%;
+  --card-foreground: 0 0% 100%;
+  --popover: 0 0% 8%;
+  --popover-foreground: 0 0% 100%;
+  --primary: 210 100% 46%;
+  --primary-foreground: 0 0% 100%;
+  --secondary: 0 0% 13%;
+  --secondary-foreground: 0 0% 100%;
+  --muted: 0 0% 13%;
+  --muted-foreground: 0 0% 50%;
+  --accent: 0 0% 13%;
+  --accent-foreground: 0 0% 100%;
+  --destructive: 0 84% 47%;
+  --destructive-foreground: 0 0% 100%;
+  --border: 0 0% 15%;
+  --input: 0 0% 15%;
+  --ring: 210 100% 46%;
+  --radius: 0.5rem;
+}
+
+/* Netflix Sans Font Fallback */
+@font-face {
+  font-family: 'Netflix Sans';
+  src: local('Helvetica Neue'), local('Helvetica'), local('Arial');
+  font-weight: 400;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: 'Netflix Sans', 'Helvetica Neue', Helvetica, Arial, sans-serif;
+  background-color: var(--netflix-black);
+  color: var(--netflix-white);
+  min-height: 100vh;
+  line-height: 1.5;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* Custom Scrollbar - Netflix Style */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--netflix-dark);
+}
+
+::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: #444;
+}
+
+@layer components {
+  /* Netflix Button Styles */
+  .netflix-btn {
+    @apply px-6 py-3 rounded font-semibold text-sm transition-all duration-200;
+    background-color: var(--netflix-blue);
+    color: var(--netflix-white);
+  }
+
+  .netflix-btn:hover {
+    background-color: var(--netflix-blue-hover);
+    transform: scale(1.02);
+  }
+
+  .netflix-btn-secondary {
+    @apply px-6 py-3 rounded font-semibold text-sm transition-all duration-200;
+    background-color: rgba(255, 255, 255, 0.1);
+    color: var(--netflix-white);
+  }
+
+  .netflix-btn-secondary:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+  }
+
+  /* Netflix Card Styles */
+  .netflix-card {
+    background-color: var(--netflix-dark);
+    border-radius: var(--radius-md);
+    transition: all 0.3s ease;
+  }
+
+  .netflix-card:hover {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-blue);
+  }
+
+  /* Netflix Input Styles */
+  .netflix-input {
+    @apply w-full px-4 py-3 rounded text-white text-sm transition-all duration-200;
+    background-color: #333;
+    border: 1px solid transparent;
+  }
+
+  .netflix-input:focus {
+    outline: none;
+    border-color: var(--netflix-blue);
+    box-shadow: 0 0 0 2px var(--netflix-blue-glow);
+  }
+
+  .netflix-input::placeholder {
+    color: #8c8c8c;
+  }
+
+  /* Netflix Modal Styles */
+  .netflix-modal {
+    background-color: var(--netflix-dark);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow-lg);
+  }
+
+  /* Netflix Header Gradient */
+  .netflix-header-gradient {
+    background: linear-gradient(to bottom, rgba(0, 0, 0, 0.7) 0%, transparent 100%);
+  }
+
+  /* Netflix Hero Gradient */
+  .netflix-hero-gradient {
+    background: linear-gradient(to top, var(--netflix-black) 0%, transparent 60%);
+  }
+}
+
+@layer utilities {
+  /* Animations */
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes fadeInUp {
+    from {
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  @keyframes slideIn {
+    from {
+      opacity: 0;
+      transform: translateX(100%);
+    }
+    to {
+      opacity: 1;
+      transform: translateX(0);
+    }
+  }
+
+  @keyframes pulse-blue {
+    0%, 100% {
+      box-shadow: 0 0 0 0 rgba(0, 113, 235, 0.4);
+    }
+    50% {
+      box-shadow: 0 0 0 10px rgba(0, 113, 235, 0);
+    }
+  }
+
+  .animate-fadeIn {
+    animation: fadeIn 0.3s ease-out;
+  }
+
+  .animate-fadeInUp {
+    animation: fadeInUp 0.4s ease-out;
+  }
+
+  .animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+  }
+
+  .animate-pulse-blue {
+    animation: pulse-blue 2s infinite;
+  }
+}
+
+/* Focus styles */
+*:focus-visible {
+  outline: 2px solid var(--netflix-blue);
+  outline-offset: 2px;
+}
+
+/* Selection */
+::selection {
+  background-color: var(--netflix-blue);
+  color: var(--netflix-white);
+}

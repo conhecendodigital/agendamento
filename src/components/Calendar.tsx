@@ -1,22 +1,16 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import type { Meeting } from '../config/supabase';
-import {
-    monthNames,
-    dayNamesShort,
-    getCalendarDays,
-    getWeekDays,
-    getTimeSlots,
-    toDateString,
-    isToday,
-    isSameDay,
-    formatTime,
-    formatDateFull,
-    getTimePosition,
-    getMeetingHeight,
-} from '../utils/dateUtils';
+import type { Meeting } from '../hooks/useMeetings';
+import { monthNames, dayNamesShort, getCalendarDays, getWeekDays, toDateString, isToday, formatTime, formatDateFull } from '../utils/dateUtils';
 
 type ViewMode = 'month' | 'week' | 'day';
+
+// Constantes de layout - estilo Google Calendar
+const HOUR_HEIGHT = 60; // pixels por hora
+const START_HOUR = 6;   // começa às 6h
+const END_HOUR = 23;    // termina às 23h
+const TOTAL_HOURS = END_HOUR - START_HOUR;
+const TOTAL_HEIGHT = TOTAL_HOURS * HOUR_HEIGHT;
 
 interface CalendarProps {
     meetings: Meeting[];
@@ -24,135 +18,210 @@ interface CalendarProps {
     onMeetingClick: (meeting: Meeting) => void;
 }
 
+// Converte horário (HH:MM:SS) para posição em pixels
+const timeToPixels = (time: string): number => {
+    const [h, m] = time.split(':').map(Number);
+    return (h - START_HOUR) * HOUR_HEIGHT + (m / 60) * HOUR_HEIGHT;
+};
+
+// Altura do evento em pixels baseado na duração
+const eventHeight = (start: string, end: string): number => {
+    const [sh, sm] = start.split(':').map(Number);
+    const [eh, em] = end.split(':').map(Number);
+    const minutes = (eh * 60 + em) - (sh * 60 + sm);
+    return Math.max((minutes / 60) * HOUR_HEIGHT, 24); // mínimo 24px
+};
+
+// Gera as horas para exibir na coluna da esquerda
+const hours = Array.from({ length: TOTAL_HOURS }, (_, i) => i + START_HOUR);
+
 export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMeetingClick }) => {
-    const [viewMode, setViewMode] = useState<ViewMode>('month');
+    const [viewMode, setViewMode] = useState<ViewMode>('week');
     const [currentDate, setCurrentDate] = useState(new Date());
+    const scrollRef = useRef<HTMLDivElement>(null);
 
     const currentYear = currentDate.getFullYear();
     const currentMonth = currentDate.getMonth();
 
-    // Navegação
-    const goToPrevious = () => {
-        const newDate = new Date(currentDate);
-        if (viewMode === 'month') {
-            newDate.setMonth(newDate.getMonth() - 1);
-        } else if (viewMode === 'week') {
-            newDate.setDate(newDate.getDate() - 7);
-        } else {
-            newDate.setDate(newDate.getDate() - 1);
+    // Auto-scroll para hora atual na primeira renderização
+    useEffect(() => {
+        if (scrollRef.current && (viewMode === 'week' || viewMode === 'day')) {
+            const now = new Date();
+            const scrollTo = (now.getHours() - START_HOUR - 1) * HOUR_HEIGHT;
+            scrollRef.current.scrollTop = Math.max(0, scrollTo);
         }
-        setCurrentDate(newDate);
+    }, [viewMode]);
+
+    const goToPrevious = () => {
+        const d = new Date(currentDate);
+        if (viewMode === 'month') d.setMonth(d.getMonth() - 1);
+        else if (viewMode === 'week') d.setDate(d.getDate() - 7);
+        else d.setDate(d.getDate() - 1);
+        setCurrentDate(d);
     };
 
     const goToNext = () => {
-        const newDate = new Date(currentDate);
-        if (viewMode === 'month') {
-            newDate.setMonth(newDate.getMonth() + 1);
-        } else if (viewMode === 'week') {
-            newDate.setDate(newDate.getDate() + 7);
-        } else {
-            newDate.setDate(newDate.getDate() + 1);
-        }
-        setCurrentDate(newDate);
+        const d = new Date(currentDate);
+        if (viewMode === 'month') d.setMonth(d.getMonth() + 1);
+        else if (viewMode === 'week') d.setDate(d.getDate() + 7);
+        else d.setDate(d.getDate() + 1);
+        setCurrentDate(d);
     };
 
-    const goToToday = () => {
-        setCurrentDate(new Date());
-    };
+    const goToToday = () => setCurrentDate(new Date());
 
-    // Função para obter o título do período atual
     const getTitle = (): string => {
-        if (viewMode === 'month') {
-            return `${monthNames[currentMonth]} ${currentYear}`;
-        } else if (viewMode === 'week') {
-            const weekDays = getWeekDays(currentDate);
-            const start = weekDays[0];
-            const end = weekDays[6];
-            if (start.getMonth() === end.getMonth()) {
-                return `${start.getDate()} - ${end.getDate()} de ${monthNames[start.getMonth()]} ${start.getFullYear()}`;
-            }
-            return `${start.getDate()} ${monthNames[start.getMonth()].slice(0, 3)} - ${end.getDate()} ${monthNames[end.getMonth()].slice(0, 3)} ${end.getFullYear()}`;
-        } else {
-            return formatDateFull(currentDate);
+        if (viewMode === 'month') return `${monthNames[currentMonth]} ${currentYear}`;
+        if (viewMode === 'week') {
+            const wd = getWeekDays(currentDate);
+            const s = wd[0], e = wd[6];
+            if (s.getMonth() === e.getMonth()) return `${s.getDate()} – ${e.getDate()} de ${monthNames[s.getMonth()]} ${s.getFullYear()}`;
+            return `${s.getDate()} ${monthNames[s.getMonth()].slice(0, 3)} – ${e.getDate()} ${monthNames[e.getMonth()].slice(0, 3)} ${e.getFullYear()}`;
         }
+        return formatDateFull(currentDate);
     };
 
-    // Mapear reuniões por data
     const meetingsByDate = useMemo(() => {
         const map: Record<string, Meeting[]> = {};
-        meetings.forEach((meeting) => {
-            if (!map[meeting.date]) {
-                map[meeting.date] = [];
-            }
-            map[meeting.date].push(meeting);
-        });
-        // Ordenar reuniões por horário
-        Object.keys(map).forEach((date) => {
-            map[date].sort((a, b) => a.start_time.localeCompare(b.start_time));
-        });
+        meetings.forEach((m) => { if (!map[m.date]) map[m.date] = []; map[m.date].push(m); });
+        Object.keys(map).forEach((date) => { map[date].sort((a, b) => a.start_time.localeCompare(b.start_time)); });
         return map;
     }, [meetings]);
 
-    // Obter cor baseada no status
     const getStatusColor = (status: Meeting['status']) => {
-        switch (status) {
-            case 'scheduled':
-                return 'bg-amber-500/20 border-amber-500 text-amber-400';
-            case 'completed':
-                return 'bg-emerald-500/20 border-emerald-500 text-emerald-400';
-            case 'cancelled':
-                return 'bg-red-500/20 border-red-500 text-red-400';
-            default:
-                return 'bg-slate-500/20 border-slate-500 text-slate-400';
-        }
+        if (status === 'scheduled') return 'bg-[#1a73e8] border-[#1a73e8] text-white';
+        if (status === 'completed') return 'bg-[#0d652d] border-[#0d652d] text-white';
+        if (status === 'cancelled') return 'bg-[#c5221f] border-[#c5221f] text-white/80';
+        return 'bg-gray-600 border-gray-600 text-white';
     };
 
-    // Dias do calendário para visualização de mês
-    const calendarDays = useMemo(() => getCalendarDays(currentYear, currentMonth), [currentYear, currentMonth]);
+    const getStatusDot = (status: Meeting['status']) => {
+        if (status === 'scheduled') return 'bg-[#1a73e8]';
+        if (status === 'completed') return 'bg-[#0d652d]';
+        if (status === 'cancelled') return 'bg-[#c5221f]';
+        return 'bg-gray-500';
+    };
 
-    // Dias da semana para visualização de semana
+    const calendarDays = useMemo(() => getCalendarDays(currentYear, currentMonth), [currentYear, currentMonth]);
     const weekDays = useMemo(() => getWeekDays(currentDate), [currentDate]);
 
-    // Slots de tempo para visualização de semana/dia
-    const timeSlots = useMemo(() => getTimeSlots(60), []);
+    // Indica hora atual com linha vermelha
+    const CurrentTimeLine = () => {
+        const now = new Date();
+        const top = (now.getHours() - START_HOUR) * HOUR_HEIGHT + (now.getMinutes() / 60) * HOUR_HEIGHT;
+        if (top < 0 || top > TOTAL_HEIGHT) return null;
+        return (
+            <div className="absolute left-0 right-0 z-20 pointer-events-none" style={{ top: `${top}px` }}>
+                <div className="flex items-center">
+                    <div className="w-3 h-3 rounded-full bg-red-500 -ml-1.5 shadow-lg shadow-red-500/30" />
+                    <div className="flex-1 h-[2px] bg-red-500 shadow-lg shadow-red-500/20" />
+                </div>
+            </div>
+        );
+    };
+
+    // Renderiza os eventos de um dia na view de semana/dia
+    const renderDayEvents = (dateStr: string, isDayView: boolean = false) => {
+        const dayMeetings = meetingsByDate[dateStr] || [];
+        return dayMeetings.map((meeting) => {
+            const top = timeToPixels(meeting.start_time);
+            const height = eventHeight(meeting.start_time, meeting.end_time);
+            return (
+                <div
+                    key={meeting.id}
+                    onClick={(e) => { e.stopPropagation(); onMeetingClick(meeting); }}
+                    className={`absolute left-1 right-1 rounded-lg cursor-pointer transition-all hover:shadow-lg hover:shadow-black/30 hover:brightness-110 overflow-hidden ${getStatusColor(meeting.status)}`}
+                    style={{ top: `${top}px`, height: `${height}px`, zIndex: 10 }}
+                >
+                    <div className={`h-full px-2 ${height > 40 ? 'py-1.5' : 'py-0.5'} flex flex-col`}>
+                        <div className={`font-semibold truncate ${height > 30 ? 'text-xs' : 'text-[10px]'}`}>
+                            {meeting.title}
+                        </div>
+                        {height > 35 && (
+                            <div className="text-[10px] opacity-80">
+                                {formatTime(meeting.start_time)} – {formatTime(meeting.end_time)}
+                            </div>
+                        )}
+                        {height > 55 && isDayView && meeting.participants.length > 0 && (
+                            <div className="text-[10px] opacity-70 mt-auto">
+                                {meeting.participants.length} participante{meeting.participants.length > 1 ? 's' : ''}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            );
+        });
+    };
+
+    // Grelha de horas (background grid)
+    const TimeGrid = ({ onCellClick, colCount = 1, dates }: {
+        onCellClick: (date: Date, time: string) => void;
+        colCount?: number;
+        dates: Date[];
+    }) => (
+        <div className="relative" style={{ height: `${TOTAL_HEIGHT}px` }}>
+            {/* Linhas horizontais das horas */}
+            {hours.map((hour) => (
+                <div key={hour} className="absolute left-0 right-0" style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px` }}>
+                    <div className="border-t border-white/[0.06]" />
+                    {/* Linha de meia hora */}
+                    <div className="absolute left-0 right-0" style={{ top: `${HOUR_HEIGHT / 2}px` }}>
+                        <div className="border-t border-white/[0.03] border-dashed" />
+                    </div>
+                </div>
+            ))}
+            {/* Colunas clicáveis */}
+            <div className="absolute inset-0 grid" style={{ gridTemplateColumns: `repeat(${colCount}, 1fr)` }}>
+                {dates.map((date, i) => (
+                    <div key={i} className="relative border-l border-white/[0.06] first:border-l-0">
+                        {hours.map((hour) => (
+                            <div key={hour}>
+                                <div
+                                    className="absolute left-0 right-0 hover:bg-[#1a73e8]/10 cursor-pointer transition-colors"
+                                    style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT}px`, height: `${HOUR_HEIGHT / 2}px` }}
+                                    onClick={() => onCellClick(date, `${hour.toString().padStart(2, '0')}:00`)}
+                                />
+                                <div
+                                    className="absolute left-0 right-0 hover:bg-[#1a73e8]/10 cursor-pointer transition-colors"
+                                    style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT + HOUR_HEIGHT / 2}px`, height: `${HOUR_HEIGHT / 2}px` }}
+                                    onClick={() => onCellClick(date, `${hour.toString().padStart(2, '0')}:30`)}
+                                />
+                            </div>
+                        ))}
+                        {/* Eventos */}
+                        {renderDayEvents(toDateString(date), colCount === 1)}
+                    </div>
+                ))}
+            </div>
+            {/* Linha da hora atual */}
+            <CurrentTimeLine />
+        </div>
+    );
 
     return (
-        <div className="glass rounded-2xl p-4 sm:p-6 animate-fadeIn">
-            {/* Header do calendário */}
-            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
-                <div className="flex items-center gap-2 sm:gap-4">
-                    <button
-                        onClick={goToPrevious}
-                        className="p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
-                    >
-                        <ChevronLeft className="w-5 h-5 text-slate-300" />
+        <div className="bg-[#141414] border border-white/5 rounded-xl overflow-hidden">
+            {/* Header Controls */}
+            <div className="flex flex-col sm:flex-row gap-3 p-4 lg:px-6 border-b border-white/5">
+                <div className="flex items-center gap-2">
+                    <button onClick={goToPrevious} className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all">
+                        <ChevronLeft className="w-5 h-5" />
                     </button>
-                    <h2 className="text-lg sm:text-xl font-bold text-white min-w-[200px] text-center">
-                        {getTitle()}
-                    </h2>
-                    <button
-                        onClick={goToNext}
-                        className="p-2 rounded-lg bg-slate-800/50 hover:bg-slate-700/50 transition-colors"
-                    >
-                        <ChevronRight className="w-5 h-5 text-slate-300" />
+                    <button onClick={goToNext} className="p-2 rounded-full hover:bg-white/10 text-gray-400 hover:text-white transition-all">
+                        <ChevronRight className="w-5 h-5" />
                     </button>
-                    <button
-                        onClick={goToToday}
-                        className="px-3 py-1.5 text-sm rounded-lg bg-amber-500/20 text-amber-400 hover:bg-amber-500/30 transition-colors"
-                    >
+                    <h2 className="text-lg lg:text-xl font-semibold text-white ml-2">{getTitle()}</h2>
+                    <button onClick={goToToday} className="ml-3 px-3 py-1.5 text-sm rounded-full border border-white/20 hover:bg-white/10 text-white font-medium transition-all">
                         Hoje
                     </button>
                 </div>
-
-                {/* Tabs de visualização */}
-                <div className="flex bg-slate-800/50 rounded-lg p-1">
+                <div className="flex bg-[#0f0f0f] rounded-full p-1 border border-white/5 sm:ml-auto">
                     {(['month', 'week', 'day'] as ViewMode[]).map((mode) => (
                         <button
                             key={mode}
                             onClick={() => setViewMode(mode)}
-                            className={`px-3 py-1.5 text-sm rounded-md transition-all ${viewMode === mode
-                                ? 'bg-amber-500 text-slate-900 font-medium'
-                                : 'text-slate-400 hover:text-white'
+                            className={`px-4 py-1.5 text-sm rounded-full transition-all font-medium ${viewMode === mode
+                                    ? 'bg-[#1a73e8] text-white shadow-lg shadow-[#1a73e8]/20'
+                                    : 'text-gray-400 hover:text-white hover:bg-white/5'
                                 }`}
                         >
                             {mode === 'month' ? 'Mês' : mode === 'week' ? 'Semana' : 'Dia'}
@@ -161,93 +230,62 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                 </div>
             </div>
 
-            {/* Visualização de Mês */}
+            {/* =================== MONTH VIEW =================== */}
             {viewMode === 'month' && (
-                <div className="animate-fadeIn">
-                    {/* Headers dos dias */}
-                    <div className="grid grid-cols-7 gap-1 mb-2">
+                <div className="p-4 lg:px-6">
+                    <div className="grid grid-cols-7 gap-px mb-px">
                         {dayNamesShort.map((day) => (
-                            <div key={day} className="text-center text-xs text-slate-400 uppercase font-medium py-2">
-                                {day}
-                            </div>
+                            <div key={day} className="text-center text-xs text-gray-500 uppercase font-medium py-2">{day.slice(0, 3)}</div>
                         ))}
                     </div>
-
-                    {/* Células dos dias */}
-                    <div className="grid grid-cols-7 gap-1">
+                    <div className="grid grid-cols-7 gap-px bg-white/[0.03] rounded-lg overflow-hidden">
                         {calendarDays.map((date, index) => {
                             const dateStr = toDateString(date);
                             const dayMeetings = meetingsByDate[dateStr] || [];
                             const isCurrentMonth = date.getMonth() === currentMonth;
                             const isTodayDate = isToday(date);
 
-                            const isWeekend = date.getDay() === 0 || date.getDay() === 6;
-
                             return (
                                 <div
                                     key={index}
                                     onClick={() => onDateSelect(date)}
-                                    className={`min-h-[80px] sm:min-h-[100px] p-1 sm:p-2 rounded-lg cursor-pointer transition-all border border-transparent hover:border-slate-600/50 ${isCurrentMonth
-                                        ? isWeekend
-                                            ? 'calendar-cell-weekend'
-                                            : 'bg-slate-800/30 hover:bg-slate-700/40'
-                                        : 'bg-slate-900/30 hover:bg-slate-800/40'
-                                        }`}
+                                    className={`
+                                        min-h-[80px] sm:min-h-[100px] lg:min-h-[110px] p-1.5 sm:p-2 cursor-pointer transition-all
+                                        ${isCurrentMonth ? 'bg-[#1a1a1a] hover:bg-[#222]' : 'bg-[#111] hover:bg-[#1a1a1a]'}
+                                    `}
                                 >
-                                    {/* Número do dia */}
                                     <div className="flex justify-between items-start mb-1">
-                                        <span
-                                            className={`w-6 h-6 sm:w-7 sm:h-7 flex items-center justify-center rounded-full text-xs sm:text-sm transition-all ${isTodayDate
-                                                ? 'bg-amber-500 text-slate-900 font-bold glow-amber-strong'
-                                                : isCurrentMonth
-                                                    ? 'text-white'
-                                                    : 'text-slate-600'
-                                                }`}
-                                        >
+                                        <span className={`
+                                            w-7 h-7 flex items-center justify-center rounded-full text-sm transition-all
+                                            ${isTodayDate
+                                                ? 'bg-[#1a73e8] text-white font-bold'
+                                                : isCurrentMonth ? 'text-gray-200' : 'text-gray-600'
+                                            }
+                                        `}>
                                             {date.getDate()}
                                         </span>
-                                        {dayMeetings.length > 2 && (
-                                            <span className="text-xs text-amber-400 hidden sm:inline">
-                                                +{dayMeetings.length - 2}
-                                            </span>
-                                        )}
                                     </div>
-
-                                    {/* Mini cards de reuniões (apenas em desktop) */}
-                                    <div className="hidden sm:flex flex-col gap-1">
-                                        {dayMeetings.slice(0, 2).map((meeting) => (
+                                    <div className="hidden sm:flex flex-col gap-0.5">
+                                        {dayMeetings.slice(0, 3).map((meeting) => (
                                             <div
                                                 key={meeting.id}
-                                                onClick={(e) => {
-                                                    e.stopPropagation();
-                                                    onMeetingClick(meeting);
-                                                }}
-                                                className={`text-xs px-1.5 py-0.5 rounded border-l-2 truncate cursor-pointer hover:opacity-80 transition-all hover:scale-[1.02] ${getStatusColor(meeting.status)} ${meeting.status === 'cancelled' ? 'meeting-cancelled' : ''}`}
+                                                onClick={(e) => { e.stopPropagation(); onMeetingClick(meeting); }}
+                                                className={`text-[11px] px-1.5 py-[2px] rounded truncate cursor-pointer hover:brightness-110 transition-all ${getStatusColor(meeting.status)}`}
                                             >
-                                                <span className={meeting.status === 'cancelled' ? 'meeting-title' : ''}>
-                                                    {formatTime(meeting.start_time)} {meeting.title}
-                                                </span>
+                                                <span className="font-medium">{formatTime(meeting.start_time)}</span> {meeting.title}
                                             </div>
                                         ))}
+                                        {dayMeetings.length > 3 && (
+                                            <div className="text-[10px] text-[#1a73e8] font-medium pl-1 hover:underline cursor-pointer">
+                                                +{dayMeetings.length - 3} mais
+                                            </div>
+                                        )}
                                     </div>
-
-                                    {/* Indicadores de reunião em mobile */}
                                     {dayMeetings.length > 0 && (
-                                        <div className="flex gap-0.5 sm:hidden mt-1">
-                                            {dayMeetings.slice(0, 3).map((meeting, i) => (
-                                                <div
-                                                    key={i}
-                                                    className={`w-1.5 h-1.5 rounded-full ${meeting.status === 'scheduled'
-                                                        ? 'bg-amber-500'
-                                                        : meeting.status === 'completed'
-                                                            ? 'bg-emerald-500'
-                                                            : 'bg-red-500'
-                                                        }`}
-                                                />
+                                        <div className="flex gap-1 sm:hidden mt-1">
+                                            {dayMeetings.slice(0, 4).map((m, i) => (
+                                                <div key={i} className={`w-1.5 h-1.5 rounded-full ${getStatusDot(m.status)}`} />
                                             ))}
-                                            {dayMeetings.length > 3 && (
-                                                <span className="text-[10px] text-slate-400">+</span>
-                                            )}
                                         </div>
                                     )}
                                 </div>
@@ -257,178 +295,103 @@ export const Calendar: React.FC<CalendarProps> = ({ meetings, onDateSelect, onMe
                 </div>
             )}
 
-            {/* Visualização de Semana */}
+            {/* =================== WEEK VIEW =================== */}
             {viewMode === 'week' && (
-                <div className="animate-fadeIn overflow-x-auto">
+                <div className="overflow-x-auto">
                     <div className="min-w-[700px]">
-                        {/* Headers dos dias */}
-                        <div className="grid grid-cols-8 gap-1 mb-2">
-                            <div className="w-16" /> {/* Espaço para horários */}
-                            {weekDays.map((date, index) => (
-                                <div
-                                    key={index}
-                                    className={`text-center py-2 rounded-lg ${isToday(date) ? 'bg-amber-500/20' : ''
-                                        }`}
-                                >
-                                    <div className="text-xs text-slate-400 uppercase">{dayNamesShort[date.getDay()]}</div>
+                        {/* Header com dias da semana */}
+                        <div className="grid border-b border-white/[0.06] sticky top-0 z-30 bg-[#141414]" style={{ gridTemplateColumns: '56px repeat(7, 1fr)' }}>
+                            <div className="py-3" /> {/* Espaço da coluna de horas */}
+                            {weekDays.map((date, i) => {
+                                const isTodayDate = isToday(date);
+                                return (
                                     <div
-                                        className={`text-lg font-bold ${isToday(date) ? 'text-amber-500' : 'text-white'
-                                            }`}
+                                        key={i}
+                                        onClick={() => { setCurrentDate(date); setViewMode('day'); }}
+                                        className={`text-center py-3 cursor-pointer transition-colors hover:bg-white/5 border-l border-white/[0.06] first:border-l-0`}
                                     >
-                                        {date.getDate()}
+                                        <div className="text-[11px] text-gray-500 uppercase tracking-wider">
+                                            {dayNamesShort[date.getDay()].slice(0, 3)}
+                                        </div>
+                                        <div className={`
+                                            w-10 h-10 mx-auto flex items-center justify-center rounded-full text-xl font-medium mt-1
+                                            ${isTodayDate ? 'bg-[#1a73e8] text-white' : 'text-gray-200 hover:bg-white/10'}
+                                        `}>
+                                            {date.getDate()}
+                                        </div>
                                     </div>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
-
-                        {/* Grid de horários */}
-                        <div className="relative h-[600px] overflow-y-auto">
-                            {/* Linhas de horário */}
-                            {timeSlots.map((time) => (
-                                <div key={time} className="grid grid-cols-8 gap-1" style={{ height: '50px' }}>
-                                    <div className="w-16 text-xs text-slate-500 text-right pr-2 pt-0.5">
-                                        {time}
-                                    </div>
-                                    {weekDays.map((date, dayIndex) => (
+                        {/* Corpo com time grid */}
+                        <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 240px)', minHeight: '500px' }}>
+                            <div className="grid" style={{ gridTemplateColumns: '56px 1fr' }}>
+                                {/* Coluna de horas */}
+                                <div className="relative" style={{ height: `${TOTAL_HEIGHT}px` }}>
+                                    {hours.map((hour) => (
                                         <div
-                                            key={dayIndex}
-                                            onClick={() => onDateSelect(date, time)}
-                                            className="border-t border-slate-700/30 hover:bg-slate-700/20 cursor-pointer transition-colors relative"
-                                        />
+                                            key={hour}
+                                            className="absolute right-2 text-[11px] text-gray-500 leading-none"
+                                            style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT - 6}px` }}
+                                        >
+                                            {hour.toString().padStart(2, '0')}:00
+                                        </div>
                                     ))}
                                 </div>
-                            ))}
-
-                            {/* Overlay de reuniões */}
-                            <div className="absolute inset-0 pointer-events-none">
-                                <div className="grid grid-cols-8 gap-1 h-full">
-                                    <div className="w-16" />
-                                    {weekDays.map((date, dayIndex) => {
-                                        const dateStr = toDateString(date);
-                                        const dayMeetings = meetingsByDate[dateStr] || [];
-                                        return (
-                                            <div key={dayIndex} className="relative">
-                                                {dayMeetings.map((meeting) => {
-                                                    const top = getTimePosition(meeting.start_time);
-                                                    const height = getMeetingHeight(meeting.start_time, meeting.end_time);
-                                                    return (
-                                                        <div
-                                                            key={meeting.id}
-                                                            onClick={(e) => {
-                                                                e.stopPropagation();
-                                                                onMeetingClick(meeting);
-                                                            }}
-                                                            className={`absolute left-0 right-1 px-1 py-0.5 rounded-r border-l-4 cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity overflow-hidden ${getStatusColor(meeting.status)}`}
-                                                            style={{
-                                                                top: `${top}%`,
-                                                                height: `${Math.max(height, 3)}%`,
-                                                            }}
-                                                        >
-                                                            <div className="text-xs font-medium truncate">
-                                                                {meeting.title}
-                                                            </div>
-                                                            <div className="text-[10px] opacity-80">
-                                                                {formatTime(meeting.start_time)} - {formatTime(meeting.end_time)}
-                                                            </div>
-                                                        </div>
-                                                    );
-                                                })}
-                                            </div>
-                                        );
-                                    })}
-                                </div>
+                                {/* Grid de eventos */}
+                                <TimeGrid
+                                    colCount={7}
+                                    dates={weekDays}
+                                    onCellClick={(date, time) => onDateSelect(date, time)}
+                                />
                             </div>
-
-                            {/* Indicador de hora atual */}
-                            {weekDays.some((d) => isToday(d)) && (() => {
-                                const now = new Date();
-                                const nowTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                                const top = getTimePosition(nowTime);
-                                if (top >= 0 && top <= 100) {
-                                    return (
-                                        <div
-                                            className="absolute left-16 right-0 h-0.5 bg-red-500 z-10"
-                                            style={{ top: `${top}%` }}
-                                        >
-                                            <div className="absolute -left-1 -top-1.5 w-3 h-3 bg-red-500 rounded-full" />
-                                        </div>
-                                    );
-                                }
-                                return null;
-                            })()}
                         </div>
                     </div>
                 </div>
             )}
 
-            {/* Visualização de Dia */}
+            {/* =================== DAY VIEW =================== */}
             {viewMode === 'day' && (
-                <div className="animate-fadeIn">
-                    {/* Grid de horários */}
-                    <div className="relative h-[600px] overflow-y-auto">
-                        {/* Linhas de horário */}
-                        {getTimeSlots(30).map((time) => (
-                            <div key={time} className="flex" style={{ height: '40px' }}>
-                                <div className="w-16 text-xs text-slate-500 text-right pr-2 pt-0.5 flex-shrink-0">
-                                    {time.endsWith(':00') ? time : ''}
-                                </div>
-                                <div
-                                    onClick={() => onDateSelect(currentDate, time)}
-                                    className="flex-1 border-t border-slate-700/30 hover:bg-slate-700/20 cursor-pointer transition-colors"
-                                />
+                <div>
+                    {/* Header do dia */}
+                    <div className="border-b border-white/[0.06] px-4 py-3">
+                        <div className="flex items-center gap-3 ml-14">
+                            <div className={`
+                                w-12 h-12 flex items-center justify-center rounded-full text-2xl font-medium
+                                ${isToday(currentDate) ? 'bg-[#1a73e8] text-white' : 'text-gray-200'}
+                            `}>
+                                {currentDate.getDate()}
                             </div>
-                        ))}
-
-                        {/* Reuniões do dia */}
-                        <div className="absolute left-16 right-0 top-0 bottom-0 pointer-events-none">
-                            {(meetingsByDate[toDateString(currentDate)] || []).map((meeting) => {
-                                const top = getTimePosition(meeting.start_time);
-                                const height = getMeetingHeight(meeting.start_time, meeting.end_time);
-                                return (
-                                    <div
-                                        key={meeting.id}
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            onMeetingClick(meeting);
-                                        }}
-                                        className={`absolute left-1 right-2 px-3 py-2 rounded-lg border-l-4 cursor-pointer pointer-events-auto hover:opacity-80 transition-opacity ${getStatusColor(meeting.status)}`}
-                                        style={{
-                                            top: `${top}%`,
-                                            height: `${Math.max(height, 5)}%`,
-                                        }}
-                                    >
-                                        <div className="font-medium truncate">{meeting.title}</div>
-                                        <div className="text-sm opacity-80">
-                                            {formatTime(meeting.start_time)} - {formatTime(meeting.end_time)}
-                                        </div>
-                                        {meeting.participants.length > 0 && (
-                                            <div className="text-xs opacity-70 mt-1">
-                                                {meeting.participants.length} participante{meeting.participants.length > 1 ? 's' : ''}
-                                            </div>
-                                        )}
-                                    </div>
-                                );
-                            })}
+                            <div>
+                                <div className="text-sm text-gray-400">{dayNamesShort[currentDate.getDay()]}</div>
+                                <div className="text-xs text-gray-500">
+                                    {(meetingsByDate[toDateString(currentDate)] || []).length} evento(s)
+                                </div>
+                            </div>
                         </div>
-
-                        {/* Indicador de hora atual */}
-                        {isToday(currentDate) && (() => {
-                            const now = new Date();
-                            const nowTime = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}`;
-                            const top = getTimePosition(nowTime);
-                            if (top >= 0 && top <= 100) {
-                                return (
+                    </div>
+                    {/* Corpo */}
+                    <div ref={scrollRef} className="overflow-y-auto" style={{ maxHeight: 'calc(100vh - 280px)', minHeight: '500px' }}>
+                        <div className="grid" style={{ gridTemplateColumns: '56px 1fr' }}>
+                            {/* Coluna de horas */}
+                            <div className="relative" style={{ height: `${TOTAL_HEIGHT}px` }}>
+                                {hours.map((hour) => (
                                     <div
-                                        className="absolute left-16 right-0 h-0.5 bg-red-500 z-10"
-                                        style={{ top: `${top}%` }}
+                                        key={hour}
+                                        className="absolute right-2 text-[11px] text-gray-500 leading-none"
+                                        style={{ top: `${(hour - START_HOUR) * HOUR_HEIGHT - 6}px` }}
                                     >
-                                        <div className="absolute -left-1 -top-1.5 w-3 h-3 bg-red-500 rounded-full" />
-                                        <span className="absolute left-4 -top-2.5 text-xs text-red-500 font-medium">Agora</span>
+                                        {hour.toString().padStart(2, '0')}:00
                                     </div>
-                                );
-                            }
-                            return null;
-                        })()}
+                                ))}
+                            </div>
+                            {/* Grid de eventos */}
+                            <TimeGrid
+                                colCount={1}
+                                dates={[currentDate]}
+                                onCellClick={(date, time) => onDateSelect(date, time)}
+                            />
+                        </div>
                     </div>
                 </div>
             )}

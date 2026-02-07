@@ -1,7 +1,8 @@
 import React from 'react';
-import { X, Edit, Trash2, XCircle, Mail, Calendar, Clock, RefreshCw, CheckCircle, AlertCircle } from 'lucide-react';
-import type { Meeting } from '../config/supabase';
+import { X, Edit, Trash2, XCircle, Calendar, Clock, RefreshCw, CheckCircle, AlertCircle, Video } from 'lucide-react';
+import type { Meeting } from '../hooks/useMeetings';
 import { formatDateFull, formatTime } from '../utils/dateUtils';
+import { getRandomPhrase } from '../utils/motivationalPhrases';
 
 interface MeetingDetailsModalProps {
     isOpen: boolean;
@@ -20,168 +21,173 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
     onEdit,
     onCancel,
     onDelete,
-    onResendWebhook,
+    onResendWebhook
 }) => {
     if (!isOpen || !meeting) return null;
 
+    // Netflix Style Status Badge
     const getStatusBadge = () => {
-        switch (meeting.status) {
-            case 'scheduled':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-amber-500/20 text-amber-400 rounded-full text-sm">
-                        <Calendar className="w-4 h-4" />
-                        Agendada
-                    </span>
-                );
-            case 'completed':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-emerald-500/20 text-emerald-400 rounded-full text-sm">
-                        <CheckCircle className="w-4 h-4" />
-                        Concluída
-                    </span>
-                );
-            case 'cancelled':
-                return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-red-500/20 text-red-400 rounded-full text-sm">
-                        <XCircle className="w-4 h-4" />
-                        Cancelada
-                    </span>
-                );
+        if (meeting.status === 'scheduled') {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#0071eb]/20 text-[#0071eb] border border-[#0071eb]/30 rounded-full text-sm">
+                    <Calendar className="w-4 h-4" />Agendada
+                </span>
+            );
         }
+        if (meeting.status === 'completed') {
+            return (
+                <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#46d369]/20 text-[#46d369] border border-[#46d369]/30 rounded-full text-sm">
+                    <CheckCircle className="w-4 h-4" />Concluída
+                </span>
+            );
+        }
+        return (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1 bg-[#e50914]/20 text-[#e50914] border border-[#e50914]/30 rounded-full text-sm">
+                <XCircle className="w-4 h-4" />Cancelada
+            </span>
+        );
     };
 
     const meetingDate = new Date(meeting.date + 'T12:00:00');
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Overlay */}
-            <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={onClose}
-            />
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Modal */}
-            <div className="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg overflow-hidden animate-scaleIn">
-                {/* Decorative gradient line at top */}
-                <div className="modal-header-line" />
+            {/* Modal - Netflix Style */}
+            <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[#141414] border border-white/10 rounded-lg shadow-2xl animate-fadeInUp">
+                {/* Netflix Blue Line */}
+                <div className="absolute top-0 left-0 right-0 h-[2px] bg-[#0071eb] rounded-t-lg" />
 
                 {/* Header */}
-                <div className="flex items-start justify-between p-6 border-b border-slate-700">
+                <div className="sticky top-0 z-10 flex items-start justify-between p-5 border-b border-white/5 bg-[#141414]">
                     <div className="flex-1 pr-4">
                         <div className="mb-3">{getStatusBadge()}</div>
                         <h2 className="text-xl font-bold text-white line-clamp-2">{meeting.title}</h2>
                     </div>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-slate-700 transition-colors"
+                        className="p-2 rounded-lg hover:bg-white/5 border border-transparent hover:border-white/10 transition-all flex-shrink-0 focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
                     >
-                        <X className="w-5 h-5 text-slate-400" />
+                        <X className="w-5 h-5 text-gray-400" />
                     </button>
                 </div>
 
-                {/* Conteúdo */}
-                <div className="p-6 space-y-5">
-                    {/* Data e horário */}
+                <div className="p-5 space-y-5">
+                    {/* Date/Time */}
                     <div className="flex flex-col sm:flex-row gap-4">
-                        <div className="flex items-center gap-3 text-slate-300">
-                            <Calendar className="w-5 h-5 text-amber-500" />
+                        <div className="flex items-center gap-3 text-gray-300">
+                            <div className="p-2 rounded-lg bg-[#0071eb]/10">
+                                <Calendar className="w-5 h-5 text-[#0071eb]" />
+                            </div>
                             <span>{formatDateFull(meetingDate)}</span>
                         </div>
-                        <div className="flex items-center gap-3 text-slate-300">
-                            <Clock className="w-5 h-5 text-amber-500" />
+                        <div className="flex items-center gap-3 text-gray-300">
+                            <div className="p-2 rounded-lg bg-[#0071eb]/10">
+                                <Clock className="w-5 h-5 text-[#0071eb]" />
+                            </div>
                             <span>{formatTime(meeting.start_time)} - {formatTime(meeting.end_time)}</span>
                         </div>
                     </div>
 
-                    {/* Descrição */}
+                    {/* Description */}
                     {meeting.description && (
                         <div>
-                            <h3 className="text-sm font-medium text-slate-400 mb-2">Descrição</h3>
-                            <p className="text-slate-300 bg-slate-900/50 rounded-lg p-3">{meeting.description}</p>
+                            <h3 className="text-sm font-medium text-gray-400 mb-2">Descrição</h3>
+                            <p className="text-gray-300 bg-[#222] border border-white/5 rounded-lg p-4">
+                                {meeting.description}
+                            </p>
                         </div>
                     )}
 
-                    {/* Participantes */}
+                    {/* Participants */}
                     <div>
-                        <h3 className="text-sm font-medium text-amber-500 mb-3">
+                        <h3 className="text-sm font-medium text-[#0071eb] mb-3">
                             Participantes ({meeting.participants.length})
                         </h3>
-                        <div className="flex flex-wrap gap-2">
-                            {meeting.participants.map((email) => (
-                                <div
-                                    key={email}
-                                    className="flex items-center gap-2 bg-slate-900/50 px-3 py-2 rounded-full text-sm"
-                                >
-                                    <div className="avatar-initials w-6 h-6 rounded-full text-[10px]">
-                                        {email.slice(0, 2).toUpperCase()}
+                        <div className="flex flex-col gap-2">
+                            {meeting.participants.map((email, i) => {
+                                const name = meeting.participant_names?.[i] || email.split('@')[0];
+                                return (
+                                    <div
+                                        key={email}
+                                        className="flex items-center gap-3 bg-[#222] border border-white/5 px-3 py-2 rounded-lg text-sm"
+                                    >
+                                        <div className="w-7 h-7 rounded-full bg-[#0071eb] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                                            {name.slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white text-sm font-medium truncate">{name}</p>
+                                            <p className="text-gray-500 text-xs truncate">{email}</p>
+                                        </div>
                                     </div>
-                                    <span className="text-slate-300">{email}</span>
-                                </div>
-                            ))}
+                                );
+                            })}
                         </div>
                     </div>
 
-                    {/* Status de sincronização */}
-                    <div className="flex items-center justify-between bg-slate-900/50 rounded-lg p-4">
-                        <div className="flex items-center gap-3">
-                            {meeting.webhook_sent ? (
-                                <>
-                                    <CheckCircle className="w-5 h-5 text-emerald-500" />
-                                    <div>
-                                        <span className="text-slate-300 text-sm">Webhook enviado</span>
-                                        {meeting.google_event_id && (
-                                            <p className="text-xs text-slate-500 mt-0.5">Sincronizado com Google Calendar</p>
-                                        )}
+                    {/* Meet Link & Motivational */}
+                    {meeting.webhook_sent ? (
+                        <div className="space-y-3">
+                            {meeting.meet_link && (
+                                <a
+                                    href={meeting.meet_link}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                    className="flex items-center gap-3 bg-[#0071eb]/10 hover:bg-[#0071eb]/20 border border-[#0071eb]/30 rounded-lg px-4 py-3 transition-all group"
+                                >
+                                    <Video className="w-5 h-5 text-[#0071eb] group-hover:text-white transition-colors flex-shrink-0" />
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-[#0071eb] group-hover:text-white transition-colors">Entrar na Reunião</p>
+                                        <p className="text-xs text-gray-500 truncate">{meeting.meet_link}</p>
                                     </div>
-                                </>
-                            ) : (
-                                <>
-                                    <AlertCircle className="w-5 h-5 text-amber-500" />
-                                    <span className="text-slate-300 text-sm">Webhook não enviado</span>
-                                </>
+                                </a>
                             )}
+                            <div className="flex items-center gap-3 bg-[#222] border border-white/5 rounded-lg px-4 py-3">
+                                <CheckCircle className="w-5 h-5 text-[#46d369] flex-shrink-0" />
+                                <p className="text-gray-400 text-sm italic">{getRandomPhrase()}</p>
+                            </div>
                         </div>
-                        {!meeting.webhook_sent && (
+                    ) : (
+                        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#222] border border-white/5 rounded-lg p-4">
+                            <div className="flex items-center gap-3">
+                                <AlertCircle className="w-5 h-5 text-[#f5c518] flex-shrink-0" />
+                                <span className="text-gray-300 text-sm">Aguardando sincronização</span>
+                            </div>
                             <button
                                 onClick={() => onResendWebhook(meeting)}
-                                className="flex items-center gap-2 px-3 py-1.5 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors text-sm"
+                                className="flex items-center gap-2 px-3 py-1.5 bg-[#0071eb]/20 text-[#0071eb] rounded-lg hover:bg-[#0071eb]/30 border border-[#0071eb]/30 transition-colors text-sm focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
                             >
-                                <RefreshCw className="w-4 h-4" />
-                                Reenviar
+                                <RefreshCw className="w-4 h-4" />Sincronizar
                             </button>
-                        )}
-                    </div>
+                        </div>
+                    )}
                 </div>
 
-                {/* Botões de ação */}
-                <div className="flex gap-2 p-6 pt-0">
+                {/* Action Buttons */}
+                <div className="flex flex-wrap gap-2 p-5 pt-0">
                     {meeting.status !== 'cancelled' && (
                         <>
                             <button
-                                onClick={() => {
-                                    onClose();
-                                    onEdit(meeting);
-                                }}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-slate-700 text-white rounded-lg hover:bg-slate-600 transition-colors"
+                                onClick={() => { onClose(); onEdit(meeting); }}
+                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 px-4 bg-[#222] text-white border border-white/10 rounded-lg hover:bg-[#333] transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
                             >
-                                <Edit className="w-4 h-4" />
-                                Editar
+                                <Edit className="w-4 h-4" />Editar
                             </button>
                             <button
                                 onClick={() => onCancel(meeting)}
-                                className="flex-1 flex items-center justify-center gap-2 py-2.5 px-4 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
+                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-2.5 px-4 bg-[#f5c518]/20 text-[#f5c518] border border-[#f5c518]/30 rounded-lg hover:bg-[#f5c518]/30 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#f5c518]"
                             >
-                                <XCircle className="w-4 h-4" />
-                                Cancelar
+                                <XCircle className="w-4 h-4" />Cancelar
                             </button>
                         </>
                     )}
                     <button
                         onClick={() => onDelete(meeting)}
-                        className="flex items-center justify-center gap-2 py-2.5 px-4 bg-red-500/20 text-red-400 rounded-lg hover:bg-red-500/30 transition-colors"
+                        className={`flex items-center justify-center gap-2 py-2.5 px-4 bg-[#e50914]/20 text-[#e50914] border border-[#e50914]/30 rounded-lg hover:bg-[#e50914]/30 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#e50914] ${meeting.status === 'cancelled' ? 'flex-1' : ''}`}
                     >
-                        <Trash2 className="w-4 h-4" />
-                        Excluir
+                        <Trash2 className="w-4 h-4" />Excluir
                     </button>
                 </div>
             </div>

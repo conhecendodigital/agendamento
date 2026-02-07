@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { X, Loader2, Mail, Plus, Calendar, Clock } from 'lucide-react';
-import type { Meeting } from '../config/supabase';
-import { formatDateBR, toDateString } from '../utils/dateUtils';
+import { X, Loader2, Mail, Plus, Calendar, Clock, User } from 'lucide-react';
+import type { Meeting } from '../hooks/useMeetings';
+import { toDateString } from '../utils/dateUtils';
 
 interface MeetingModalProps {
     isOpen: boolean;
@@ -12,14 +12,42 @@ interface MeetingModalProps {
     prefilledTime?: string | null;
 }
 
+interface ParticipantEntry {
+    name: string;
+    email: string;
+}
+
 interface FormData {
     title: string;
     description: string;
     date: string;
     start_time: string;
     end_time: string;
-    participants: string[];
+    participantEntries: ParticipantEntry[];
 }
+
+// Netflix Style Icon Input - OUTSIDE component to prevent focus loss
+const IconInput: React.FC<{
+    icon: React.ElementType;
+    type?: string;
+    value: string;
+    onChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
+    placeholder?: string;
+    className?: string;
+    onKeyDown?: (e: React.KeyboardEvent) => void;
+}> = ({ icon: Icon, type = 'text', value, onChange, placeholder, className = '', onKeyDown }) => (
+    <div className="relative w-full">
+        <Icon className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+        <input
+            type={type}
+            value={value}
+            onChange={onChange}
+            onKeyDown={onKeyDown}
+            placeholder={placeholder}
+            className={`w-full pl-12 pr-4 py-3 bg-[#222] border border-white/10 rounded text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all ${className}`}
+        />
+    </div>
+);
 
 export const MeetingModal: React.FC<MeetingModalProps> = ({
     isOpen,
@@ -27,7 +55,7 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
     onSave,
     editMeeting,
     prefilledDate,
-    prefilledTime,
+    prefilledTime
 }) => {
     const [formData, setFormData] = useState<FormData>({
         title: '',
@@ -35,77 +63,80 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
         date: '',
         start_time: '',
         end_time: '',
-        participants: [],
+        participantEntries: []
     });
-    const [participantInput, setParticipantInput] = useState('');
-    const [errors, setErrors] = useState<Partial<Record<keyof FormData | 'participant', string>>>({});
+    const [participantName, setParticipantName] = useState('');
+    const [participantEmail, setParticipantEmail] = useState('');
+    const [errors, setErrors] = useState<Record<string, string>>({});
     const [loading, setSaving] = useState(false);
 
-    // Preencher formulário quando abrir
     useEffect(() => {
         if (isOpen) {
             if (editMeeting) {
+                // Reconstruct participant entries from existing data
+                const entries: ParticipantEntry[] = editMeeting.participants.map((email, i) => ({
+                    name: editMeeting.participant_names?.[i] || '',
+                    email
+                }));
                 setFormData({
                     title: editMeeting.title,
                     description: editMeeting.description || '',
                     date: editMeeting.date,
                     start_time: editMeeting.start_time.slice(0, 5),
                     end_time: editMeeting.end_time.slice(0, 5),
-                    participants: editMeeting.participants,
+                    participantEntries: entries
                 });
             } else {
                 const today = new Date();
                 const defaultDate = prefilledDate || today;
                 const defaultTime = prefilledTime || `${today.getHours().toString().padStart(2, '0')}:00`;
                 const endHour = parseInt(defaultTime.split(':')[0]) + 1;
-                const defaultEndTime = `${endHour.toString().padStart(2, '0')}:00`;
-
                 setFormData({
                     title: '',
                     description: '',
                     date: toDateString(defaultDate),
                     start_time: defaultTime,
-                    end_time: defaultEndTime,
-                    participants: [],
+                    end_time: `${endHour.toString().padStart(2, '0')}:00`,
+                    participantEntries: []
                 });
             }
-            setParticipantInput('');
+            setParticipantName('');
+            setParticipantEmail('');
             setErrors({});
         }
     }, [isOpen, editMeeting, prefilledDate, prefilledTime]);
 
-    const validateEmail = (email: string): boolean => {
-        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-        return emailRegex.test(email);
-    };
+    const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
 
     const addParticipant = () => {
-        const email = participantInput.trim().toLowerCase();
+        const email = participantEmail.trim().toLowerCase();
+        const name = participantName.trim();
 
-        if (!email) return;
-
+        if (!email) {
+            setErrors(p => ({ ...p, participant: 'Informe o email' }));
+            return;
+        }
         if (!validateEmail(email)) {
-            setErrors((prev) => ({ ...prev, participant: 'Email inválido' }));
+            setErrors(p => ({ ...p, participant: 'Email inválido' }));
             return;
         }
-
-        if (formData.participants.includes(email)) {
-            setErrors((prev) => ({ ...prev, participant: 'Email já adicionado' }));
+        if (formData.participantEntries.some(p => p.email === email)) {
+            setErrors(p => ({ ...p, participant: 'Email já adicionado' }));
             return;
         }
-
-        setFormData((prev) => ({
-            ...prev,
-            participants: [...prev.participants, email],
+        setFormData(p => ({
+            ...p,
+            participantEntries: [...p.participantEntries, { name: name || email.split('@')[0], email }]
         }));
-        setParticipantInput('');
-        setErrors((prev) => ({ ...prev, participant: undefined }));
+        setParticipantName('');
+        setParticipantEmail('');
+        setErrors(p => ({ ...p, participant: undefined as any }));
     };
 
     const removeParticipant = (email: string) => {
-        setFormData((prev) => ({
-            ...prev,
-            participants: prev.participants.filter((p) => p !== email),
+        setFormData(p => ({
+            ...p,
+            participantEntries: p.participantEntries.filter(e => e.email !== email)
         }));
     };
 
@@ -116,62 +147,24 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
         }
     };
 
-    const validateForm = (): boolean => {
-        const newErrors: Partial<Record<keyof FormData, string>> = {};
-
-        if (!formData.title.trim()) {
-            newErrors.title = 'Título é obrigatório';
-        }
-
-        if (!formData.date) {
-            newErrors.date = 'Data é obrigatória';
-        } else {
-            const selectedDate = new Date(formData.date);
-            const today = new Date();
-            today.setHours(0, 0, 0, 0);
-            if (selectedDate < today && !editMeeting) {
-                newErrors.date = 'Não é possível agendar para datas passadas';
-            }
-        }
-
-        if (!formData.start_time) {
-            newErrors.start_time = 'Horário de início é obrigatório';
-        }
-
-        if (!formData.end_time) {
-            newErrors.end_time = 'Horário de fim é obrigatório';
-        } else if (formData.start_time && formData.end_time <= formData.start_time) {
-            newErrors.end_time = 'Horário de fim deve ser após o início';
-        }
-
-        if (formData.participants.length === 0) {
-            newErrors.participants = 'Adicione pelo menos um participante';
-        }
-
-        setErrors(newErrors);
-        return Object.keys(newErrors).length === 0;
-    };
-
     const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
-
-        if (!validateForm()) return;
-
         setSaving(true);
-
         try {
-            await onSave({
-                title: formData.title.trim(),
-                description: formData.description.trim() || null,
+            const meetingPayload = {
+                title: formData.title,
+                description: formData.description,
                 date: formData.date,
                 start_time: formData.start_time,
                 end_time: formData.end_time,
-                participants: formData.participants,
-                status: editMeeting?.status || 'scheduled',
-            });
+                participants: formData.participantEntries.map(p => p.email),
+                participant_names: formData.participantEntries.map(p => p.name),
+                status: editMeeting?.status || 'scheduled' as const
+            };
+            await onSave(meetingPayload);
             onClose();
         } catch (error) {
-            console.error('Erro ao salvar reunião:', error);
+            console.error('Erro ao salvar:', error);
         } finally {
             setSaving(false);
         }
@@ -181,160 +174,149 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
 
     return (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-            {/* Overlay */}
-            <div
-                className="absolute inset-0 bg-black/60 backdrop-blur-sm"
-                onClick={onClose}
-            />
+            {/* Backdrop */}
+            <div className="absolute inset-0 bg-black/90 backdrop-blur-sm" onClick={onClose} />
 
-            {/* Modal */}
-            <div className="relative bg-slate-800 border border-slate-700 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto animate-scaleIn">
+            {/* Modal - Netflix Style */}
+            <div className="relative w-full max-w-lg max-h-[90vh] overflow-y-auto bg-[#141414] border border-white/10 rounded-lg shadow-2xl animate-fadeInUp">
                 {/* Header */}
-                <div className="flex items-center justify-between p-6 border-b border-slate-700">
-                    <h2 className="text-xl font-bold text-white">
+                <div className="sticky top-0 z-10 flex items-center justify-between p-5 border-b border-white/5 bg-[#141414]">
+                    <h2 className="text-lg font-bold text-white">
                         {editMeeting ? 'Editar Reunião' : 'Nova Reunião'}
                     </h2>
                     <button
                         onClick={onClose}
-                        className="p-2 rounded-lg hover:bg-slate-700 transition-colors"
+                        className="p-2 rounded-lg hover:bg-white/5 transition-colors"
                     >
-                        <X className="w-5 h-5 text-slate-400" />
+                        <X className="w-5 h-5 text-gray-400" />
                     </button>
                 </div>
 
-                {/* Formulário */}
-                <form onSubmit={handleSubmit} className="p-6 space-y-5">
-                    {/* Título */}
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="p-5 space-y-5">
+                    {/* Title */}
                     <div>
-                        <label htmlFor="title" className="block text-sm font-medium text-slate-300 mb-1.5">
-                            Assunto *
+                        <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                            Assunto
                         </label>
                         <input
                             type="text"
-                            id="title"
                             value={formData.title}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, title: e.target.value }))}
-                            placeholder="Ex: Reunião de alinhamento semanal"
-                            className={`w-full bg-slate-900/50 border rounded-lg py-3 px-4 text-white placeholder-slate-500 transition-all ${errors.title ? 'border-red-500' : 'border-slate-600 focus:border-amber-500'
-                                }`}
+                            onChange={e => setFormData(p => ({ ...p, title: e.target.value }))}
+                            placeholder="Ex: Daily Meeting"
+                            className="w-full bg-[#222] border border-white/10 rounded py-3 px-4 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all"
                         />
-                        {errors.title && <p className="text-red-400 text-xs mt-1">{errors.title}</p>}
                     </div>
 
-                    {/* Descrição */}
+                    {/* Description */}
                     <div>
-                        <label htmlFor="description" className="block text-sm font-medium text-slate-300 mb-1.5">
+                        <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
                             Descrição
                         </label>
                         <textarea
-                            id="description"
                             value={formData.description}
-                            onChange={(e) => setFormData((prev) => ({ ...prev, description: e.target.value }))}
-                            placeholder="Descreva o objetivo da reunião..."
+                            onChange={e => setFormData(p => ({ ...p, description: e.target.value }))}
+                            placeholder="Detalhes da reunião..."
                             rows={3}
-                            className="w-full bg-slate-900/50 border border-slate-600 rounded-lg py-3 px-4 text-white placeholder-slate-500 focus:border-amber-500 transition-all resize-none"
+                            className="w-full bg-[#222] border border-white/10 rounded py-3 px-4 text-white placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all resize-none"
                         />
                     </div>
 
-                    {/* Data e Horários */}
+                    {/* Date/Time */}
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        {/* Data */}
                         <div>
-                            <label htmlFor="date" className="block text-sm font-medium text-slate-300 mb-1.5">
-                                <Calendar className="w-4 h-4 inline mr-1" />
-                                Data *
+                            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                                Data
                             </label>
-                            <input
+                            <IconInput
+                                icon={Calendar}
                                 type="date"
-                                id="date"
                                 value={formData.date}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, date: e.target.value }))}
-                                min={!editMeeting ? toDateString(new Date()) : undefined}
-                                className={`w-full bg-slate-900/50 border rounded-lg py-3 px-4 text-white transition-all ${errors.date ? 'border-red-500' : 'border-slate-600 focus:border-amber-500'
-                                    }`}
+                                onChange={e => setFormData(p => ({ ...p, date: e.target.value }))}
                             />
-                            {errors.date && <p className="text-red-400 text-xs mt-1">{errors.date}</p>}
                         </div>
-
-                        {/* Horário início */}
                         <div>
-                            <label htmlFor="start_time" className="block text-sm font-medium text-slate-300 mb-1.5">
-                                <Clock className="w-4 h-4 inline mr-1" />
-                                Início *
+                            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                                Início
                             </label>
-                            <input
+                            <IconInput
+                                icon={Clock}
                                 type="time"
-                                id="start_time"
                                 value={formData.start_time}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, start_time: e.target.value }))}
-                                className={`w-full bg-slate-900/50 border rounded-lg py-3 px-4 text-white transition-all ${errors.start_time ? 'border-red-500' : 'border-slate-600 focus:border-amber-500'
-                                    }`}
+                                onChange={e => setFormData(p => ({ ...p, start_time: e.target.value }))}
                             />
-                            {errors.start_time && <p className="text-red-400 text-xs mt-1">{errors.start_time}</p>}
                         </div>
-
-                        {/* Horário fim */}
                         <div>
-                            <label htmlFor="end_time" className="block text-sm font-medium text-slate-300 mb-1.5">
-                                <Clock className="w-4 h-4 inline mr-1" />
-                                Fim *
+                            <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                                Fim
                             </label>
-                            <input
+                            <IconInput
+                                icon={Clock}
                                 type="time"
-                                id="end_time"
                                 value={formData.end_time}
-                                onChange={(e) => setFormData((prev) => ({ ...prev, end_time: e.target.value }))}
-                                className={`w-full bg-slate-900/50 border rounded-lg py-3 px-4 text-white transition-all ${errors.end_time ? 'border-red-500' : 'border-slate-600 focus:border-amber-500'
-                                    }`}
+                                onChange={e => setFormData(p => ({ ...p, end_time: e.target.value }))}
                             />
-                            {errors.end_time && <p className="text-red-400 text-xs mt-1">{errors.end_time}</p>}
                         </div>
                     </div>
 
-                    {/* Participantes */}
+                    {/* Participants */}
                     <div>
-                        <label className="block text-sm font-medium text-slate-300 mb-1.5">
-                            <Mail className="w-4 h-4 inline mr-1" />
-                            Participantes *
+                        <label className="block text-xs font-medium text-gray-400 mb-2 uppercase tracking-wider">
+                            Participantes
                         </label>
-                        <div className="flex gap-2">
-                            <input
-                                type="email"
-                                value={participantInput}
-                                onChange={(e) => {
-                                    setParticipantInput(e.target.value);
-                                    setErrors((prev) => ({ ...prev, participant: undefined }));
-                                }}
-                                onKeyDown={handleKeyDown}
-                                placeholder="email@exemplo.com"
-                                className={`flex-1 bg-slate-900/50 border rounded-lg py-3 px-4 text-white placeholder-slate-500 transition-all ${errors.participant ? 'border-red-500' : 'border-slate-600 focus:border-amber-500'
-                                    }`}
-                            />
-                            <button
-                                type="button"
-                                onClick={addParticipant}
-                                className="px-4 py-3 bg-amber-500/20 text-amber-400 rounded-lg hover:bg-amber-500/30 transition-colors"
-                            >
-                                <Plus className="w-5 h-5" />
-                            </button>
+                        <div className="space-y-2">
+                            <div className="flex gap-2">
+                                <IconInput
+                                    icon={User}
+                                    type="text"
+                                    value={participantName}
+                                    onChange={e => setParticipantName(e.target.value)}
+                                    placeholder="Nome"
+                                    className="flex-1"
+                                />
+                            </div>
+                            <div className="flex gap-2">
+                                <div className="relative w-full flex-1">
+                                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-500 pointer-events-none" />
+                                    <input
+                                        type="email"
+                                        value={participantEmail}
+                                        onChange={e => setParticipantEmail(e.target.value)}
+                                        onKeyDown={handleKeyDown}
+                                        placeholder="email@exemplo.com"
+                                        className="w-full pl-12 pr-4 py-3 bg-[#222] border border-white/10 rounded text-white text-sm placeholder-gray-600 focus:outline-none focus:ring-2 focus:ring-[#0071eb] focus:border-[#0071eb] transition-all"
+                                    />
+                                </div>
+                                <button
+                                    type="button"
+                                    onClick={addParticipant}
+                                    className="px-4 py-2 bg-[#0071eb]/20 text-[#0071eb] rounded hover:bg-[#0071eb]/30 transition-colors focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
+                                >
+                                    <Plus className="w-5 h-5" />
+                                </button>
+                            </div>
                         </div>
-                        {errors.participant && <p className="text-red-400 text-xs mt-1">{errors.participant}</p>}
-                        {errors.participants && <p className="text-red-400 text-xs mt-1">{errors.participants}</p>}
-
-                        {/* Lista de participantes */}
-                        {formData.participants.length > 0 && (
-                            <div className="flex flex-wrap gap-2 mt-3">
-                                {formData.participants.map((email) => (
+                        {errors.participant && (
+                            <span className="text-xs text-[#e50914] mt-1 block">{errors.participant}</span>
+                        )}
+                        {formData.participantEntries.length > 0 && (
+                            <div className="flex flex-col gap-2 mt-3">
+                                {formData.participantEntries.map(({ name, email }) => (
                                     <div
                                         key={email}
-                                        className="flex items-center gap-2 bg-slate-700/50 px-3 py-1.5 rounded-full text-sm"
+                                        className="flex items-center gap-3 bg-[#222] border border-white/5 px-3 py-2 rounded-lg text-sm"
                                     >
-                                        <Mail className="w-3.5 h-3.5 text-slate-400" />
-                                        <span className="text-slate-300">{email}</span>
+                                        <div className="w-7 h-7 rounded-full bg-[#0071eb] flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0">
+                                            {name.slice(0, 2).toUpperCase()}
+                                        </div>
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white text-sm font-medium truncate">{name}</p>
+                                            <p className="text-gray-500 text-xs truncate">{email}</p>
+                                        </div>
                                         <button
                                             type="button"
                                             onClick={() => removeParticipant(email)}
-                                            className="text-slate-500 hover:text-red-400 transition-colors"
+                                            className="hover:text-[#e50914] text-gray-500 transition-colors flex-shrink-0"
                                         >
                                             <X className="w-4 h-4" />
                                         </button>
@@ -344,30 +326,21 @@ export const MeetingModal: React.FC<MeetingModalProps> = ({
                         )}
                     </div>
 
-                    {/* Botões */}
+                    {/* Actions */}
                     <div className="flex gap-3 pt-4">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 py-3 px-4 border border-slate-600 text-slate-300 rounded-lg hover:bg-slate-700 transition-colors"
+                            className="flex-1 py-3 px-4 border border-white/10 text-gray-300 rounded hover:bg-white/5 transition-colors font-medium focus:outline-none focus:ring-2 focus:ring-white/20"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
                             disabled={loading}
-                            className="flex-1 btn-primary py-3 px-4 rounded-lg text-slate-900 font-semibold flex items-center justify-center gap-2 disabled:opacity-50"
+                            className="flex-1 bg-[#0071eb] hover:bg-[#0056b3] text-white rounded py-3 px-4 font-bold flex items-center justify-center gap-2 focus:outline-none focus:ring-2 focus:ring-[#0071eb] disabled:opacity-50 transition-all"
                         >
-                            {loading ? (
-                                <>
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                    Salvando...
-                                </>
-                            ) : editMeeting ? (
-                                'Salvar Alterações'
-                            ) : (
-                                'Agendar Reunião'
-                            )}
+                            {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : editMeeting ? 'Salvar' : 'Agendar'}
                         </button>
                     </div>
                 </form>

@@ -1,33 +1,23 @@
 import React, { useState } from 'react';
-import { LogOut, Plus, Calendar, Clock, Users, CalendarCheck, Loader2, TrendingUp } from 'lucide-react';
+import { LogOut, Plus, Calendar, Clock, Users, CalendarCheck, Loader2, MessageSquare } from 'lucide-react';
 import { LionLogo } from './LionLogo';
 import { Calendar as CalendarComponent } from './Calendar';
+import { ChatPanel } from './ChatPanel';
 import { MeetingModal } from './MeetingModal';
 import { MeetingDetailsModal } from './MeetingDetailsModal';
 import { useToast } from './Toast';
 import { useAuth } from '../hooks/useAuth';
 import { useMeetings } from '../hooks/useMeetings';
-import type { Meeting } from '../config/supabase';
+import type { Meeting } from '../hooks/useMeetings';
 import { sendWebhook } from '../utils/webhook';
 import { formatDateBR, formatTime } from '../utils/dateUtils';
+import { getRandomPhrase } from '../utils/motivationalPhrases';
 
 export const Dashboard: React.FC = () => {
     const { user, signOut } = useAuth();
-    const {
-        meetings,
-        loading,
-        createMeeting,
-        updateMeeting,
-        deleteMeeting,
-        updateWebhookStatus,
-        getUpcomingMeetings,
-        getTodayMeetingsCount,
-        getUniqueParticipantsCount,
-        getNextMeeting,
-    } = useMeetings();
+    const { meetings, createMeeting, updateMeeting, deleteMeeting, updateWebhookStatus, getUpcomingMeetings, getTodayMeetingsCount, getUniqueParticipantsCount, getNextMeeting } = useMeetings();
     const { showToast } = useToast();
 
-    // States para modais
     const [showMeetingModal, setShowMeetingModal] = useState(false);
     const [showDetailsModal, setShowDetailsModal] = useState(false);
     const [editingMeeting, setEditingMeeting] = useState<Meeting | null>(null);
@@ -35,17 +25,18 @@ export const Dashboard: React.FC = () => {
     const [prefilledDate, setPrefilledDate] = useState<Date | null>(null);
     const [prefilledTime, setPrefilledTime] = useState<string | null>(null);
     const [loggingOut, setLoggingOut] = useState(false);
+    const [activeTab, setActiveTab] = useState<'calendar' | 'chat'>('calendar');
 
     const handleLogout = async () => {
         setLoggingOut(true);
         try {
             await signOut();
-            showToast('success', 'Logout realizado com sucesso!');
-        } catch (error) {
-            showToast('error', 'Erro ao fazer logout');
-        } finally {
-            setLoggingOut(false);
+            showToast('success', 'Logout realizado!');
         }
+        catch {
+            showToast('error', 'Erro ao sair');
+        }
+        finally { setLoggingOut(false); }
     };
 
     const handleDateSelect = (date: Date, time?: string) => {
@@ -60,101 +51,31 @@ export const Dashboard: React.FC = () => {
         setShowDetailsModal(true);
     };
 
-    const handleCreateOrUpdate = async (
-        meetingData: Omit<Meeting, 'id' | 'user_id' | 'created_at' | 'webhook_sent' | 'google_event_id'>
-    ) => {
+    const handleCreateOrUpdate = async (meetingData: any) => {
         try {
             let savedMeeting: Meeting;
             const action = editingMeeting ? 'update' : 'create';
-
             if (editingMeeting) {
                 savedMeeting = await updateMeeting(editingMeeting.id, meetingData);
-                showToast('success', 'Reunião atualizada!');
+                showToast('success', 'Atualizado!');
             } else {
                 savedMeeting = await createMeeting(meetingData);
-                showToast('success', 'Reunião agendada!');
+                showToast('success', 'Agendado!');
             }
-
-            // Enviar webhook
             if (user) {
                 const webhookResult = await sendWebhook(action, savedMeeting, user);
-
                 if (webhookResult.status === 'success') {
-                    await updateWebhookStatus(savedMeeting.id, true, webhookResult.google_event_id);
-                    showToast('success', 'Sincronizado com o calendário!');
-                } else {
-                    showToast('warning', 'Reunião salva, mas houve erro ao sincronizar.');
+                    await updateWebhookStatus(savedMeeting.id, true, webhookResult.google_event_id, webhookResult.meet_link);
+                    const phrase = getRandomPhrase();
+                    const actionLabel = action === 'create' ? '✅ Evento criado com sucesso!' : '✅ Evento atualizado!';
+                    showToast('success', actionLabel, {
+                        meetLink: webhookResult.meet_link,
+                        subtitle: phrase,
+                    });
                 }
             }
-        } catch (error) {
-            showToast('error', 'Erro ao salvar reunião');
-            throw error;
-        }
-    };
-
-    const handleEditMeeting = (meeting: Meeting) => {
-        setEditingMeeting(meeting);
-        setPrefilledDate(null);
-        setPrefilledTime(null);
-        setShowDetailsModal(false);
-        setShowMeetingModal(true);
-    };
-
-    const handleCancelMeeting = async (meeting: Meeting) => {
-        if (!confirm('Deseja cancelar esta reunião?')) return;
-
-        try {
-            await updateMeeting(meeting.id, { status: 'cancelled' });
-            showToast('success', 'Reunião cancelada!');
-
-            // Enviar webhook de cancelamento
-            if (user) {
-                const updatedMeeting = { ...meeting, status: 'cancelled' as const };
-                const webhookResult = await sendWebhook('cancel', updatedMeeting, user);
-                if (webhookResult.status === 'success') {
-                    showToast('info', 'Google Calendar atualizado');
-                }
-            }
-
-            setShowDetailsModal(false);
-        } catch (error) {
-            showToast('error', 'Erro ao cancelar reunião');
-        }
-    };
-
-    const handleDeleteMeeting = async (meeting: Meeting) => {
-        if (!confirm('Esta ação não pode ser desfeita. Deseja excluir?')) return;
-
-        try {
-            // Enviar webhook de exclusão primeiro
-            if (user && meeting.google_event_id) {
-                await sendWebhook('delete', meeting, user);
-            }
-
-            await deleteMeeting(meeting.id);
-            showToast('success', 'Reunião excluída!');
-            setShowDetailsModal(false);
-        } catch (error) {
-            showToast('error', 'Erro ao excluir reunião');
-        }
-    };
-
-    const handleResendWebhook = async (meeting: Meeting) => {
-        if (!user) return;
-
-        try {
-            const action = meeting.google_event_id ? 'update' : 'create';
-            const webhookResult = await sendWebhook(action, meeting, user);
-
-            if (webhookResult.status === 'success') {
-                await updateWebhookStatus(meeting.id, true, webhookResult.google_event_id);
-                showToast('success', 'Webhook reenviado com sucesso!');
-                setShowDetailsModal(false);
-            } else {
-                showToast('error', 'Falha ao reenviar webhook');
-            }
-        } catch (error) {
-            showToast('error', 'Erro ao reenviar webhook');
+        } catch {
+            showToast('error', 'Erro ao salvar');
         }
     };
 
@@ -164,192 +85,157 @@ export const Dashboard: React.FC = () => {
     const nextMeeting = getNextMeeting();
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-800">
-            {/* Header */}
-            <header className="sticky top-0 z-40 glass-dark">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex items-center justify-between h-16">
-                        {/* Logo */}
-                        <div className="flex items-center gap-3">
-                            <LionLogo size={32} className="text-amber-500 animate-breathe" />
-                            <span className="text-lg font-semibold text-gradient-gold hidden sm:inline">
-                                Valento Academy
+        <div className="min-h-screen bg-black text-gray-200">
+            {/* Header - Netflix Style */}
+            <header className="sticky top-0 z-40 bg-black/90 backdrop-blur-md border-b border-white/5">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                        <LionLogo size={36} className="text-[#0071eb]" />
+                        <span className="text-xl font-bold text-white hidden sm:inline">Valento <span className="text-[#0071eb]">Academy</span></span>
+                    </div>
+                    <div className="flex items-center gap-3">
+                        <div className="hidden sm:flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#141414] border border-white/5">
+                            <div className="w-7 h-7 rounded-full bg-[#0071eb] flex items-center justify-center text-xs font-bold text-white">
+                                {(user?.user_metadata.full_name || user?.email || 'U').slice(0, 2).toUpperCase()}
+                            </div>
+                            <span className="text-sm text-gray-300 truncate max-w-[100px]">
+                                {user?.user_metadata.full_name?.split(' ')[0]}
                             </span>
                         </div>
-
-                        {/* User info e logout */}
-                        <div className="flex items-center gap-4">
-                            {/* Avatar with initials */}
-                            <div className="flex items-center gap-3">
-                                <div className="avatar-initials w-8 h-8 rounded-full text-xs hidden sm:flex">
-                                    {(user?.user_metadata.full_name || user?.email || 'U').slice(0, 2).toUpperCase()}
-                                </div>
-                                <span className="text-slate-300 text-sm hidden sm:inline">
-                                    {user?.user_metadata.full_name || user?.email}
-                                </span>
-                            </div>
-                            <button
-                                onClick={handleLogout}
-                                disabled={loggingOut}
-                                className="flex items-center gap-2 px-3 py-2 text-slate-400 hover:text-white hover:bg-slate-700/50 rounded-lg transition-colors"
-                            >
-                                {loggingOut ? (
-                                    <Loader2 className="w-5 h-5 animate-spin" />
-                                ) : (
-                                    <LogOut className="w-5 h-5" />
-                                )}
-                                <span className="hidden sm:inline">Sair</span>
-                            </button>
-                        </div>
+                        <button
+                            onClick={handleLogout}
+                            disabled={loggingOut}
+                            className="p-2 text-gray-400 hover:text-white transition-colors rounded-lg hover:bg-white/5"
+                        >
+                            {loggingOut ? <Loader2 className="w-5 h-5 animate-spin" /> : <LogOut className="w-5 h-5" />}
+                        </button>
                     </div>
                 </div>
-                {/* Golden decorative line */}
-                <div className="line-gradient-gold" />
             </header>
 
-            {/* Main content */}
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6">
-                {/* Cards de resumo */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-                    {/* Total de reuniões */}
-                    <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="icon-circle">
-                                <Calendar className="w-5 h-5 text-amber-500" />
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 py-6 pb-24">
+                {/* Stats Grid - Netflix Style Cards */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                    {[
+                        { title: 'Total', value: meetings.length, icon: Calendar, color: 'text-[#0071eb]' },
+                        { title: 'Hoje', value: todayCount, icon: Clock, color: 'text-[#0071eb]' },
+                        { title: 'Próxima', value: nextMeeting ? formatTime(nextMeeting.start_time) : '-', icon: CalendarCheck, color: 'text-[#0071eb]', sub: nextMeeting?.title },
+                        { title: 'Participantes', value: uniqueParticipants, icon: Users, color: 'text-[#0071eb]' }
+                    ].map((stat, i) => (
+                        <div
+                            key={i}
+                            className="bg-[#141414] border border-white/5 p-5 rounded-lg hover:border-[#0071eb]/30 transition-all group"
+                        >
+                            <div className="flex items-center gap-3 mb-2">
+                                <div className={`p-2 rounded-lg bg-[#222] ${stat.color} group-hover:scale-110 transition-transform`}>
+                                    <stat.icon className="w-5 h-5" />
+                                </div>
+                                <span className="text-gray-500 text-xs uppercase tracking-wider font-semibold">{stat.title}</span>
                             </div>
-                            <span className="text-slate-400 text-sm">Total</span>
-                        </div>
-                        {loading ? (
-                            <div className="h-8 w-16 skeleton rounded" />
-                        ) : (
                             <div className="flex items-end gap-2">
-                                <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{meetings.length}</p>
-                                <span className="text-xs text-emerald-400 flex items-center gap-0.5 mb-1">
-                                    <TrendingUp className="w-3 h-3" />
-                                </span>
+                                <span className="text-2xl font-bold text-white">{stat.value}</span>
+                                {stat.sub && <span className="text-xs text-gray-500 mb-1 truncate max-w-[100px]">{stat.sub}</span>}
                             </div>
-                        )}
-                    </div>
-
-                    {/* Reuniões hoje */}
-                    <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="icon-circle">
-                                <Clock className="w-5 h-5 text-amber-500" />
-                            </div>
-                            <span className="text-slate-400 text-sm">Hoje</span>
                         </div>
-                        {loading ? (
-                            <div className="h-8 w-16 skeleton rounded" />
-                        ) : (
-                            <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{todayCount}</p>
-                        )}
-                    </div>
-
-                    {/* Próxima reunião */}
-                    <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="icon-circle">
-                                <CalendarCheck className="w-5 h-5 text-amber-500" />
-                            </div>
-                            <span className="text-slate-400 text-sm">Próxima</span>
-                        </div>
-                        {loading ? (
-                            <div className="h-8 w-24 skeleton rounded" />
-                        ) : nextMeeting ? (
-                            <div>
-                                <p className="text-sm font-semibold text-white truncate">{nextMeeting.title}</p>
-                                <p className="text-xs text-slate-400">
-                                    {formatDateBR(new Date(nextMeeting.date + 'T12:00:00'))} às {formatTime(nextMeeting.start_time)}
-                                </p>
-                            </div>
-                        ) : (
-                            <p className="text-sm text-slate-500">Nenhuma</p>
-                        )}
-                    </div>
-
-                    {/* Participantes únicos */}
-                    <div className="glass rounded-xl p-4 sm:p-6 card-hover">
-                        <div className="flex items-center gap-3 mb-3">
-                            <div className="icon-circle">
-                                <Users className="w-5 h-5 text-amber-500" />
-                            </div>
-                            <span className="text-slate-400 text-sm">Participantes</span>
-                        </div>
-                        {loading ? (
-                            <div className="h-8 w-16 skeleton rounded" />
-                        ) : (
-                            <p className="text-2xl sm:text-3xl font-bold text-white tabular-nums">{uniqueParticipants}</p>
-                        )}
-                    </div>
+                    ))}
                 </div>
 
-                {/* Layout principal: calendário + sidebar */}
+                {/* Tab Navigation */}
+                <div className="flex items-center gap-1 mb-4 bg-[#141414] rounded-full p-1 border border-white/5 w-fit">
+                    <button
+                        onClick={() => setActiveTab('calendar')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${activeTab === 'calendar'
+                            ? 'bg-[#1a73e8] text-white shadow-lg shadow-[#1a73e8]/20'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <Calendar className="w-4 h-4" />
+                        Calendário
+                    </button>
+                    <button
+                        onClick={() => setActiveTab('chat')}
+                        className={`flex items-center gap-2 px-5 py-2.5 rounded-full text-sm font-medium transition-all ${activeTab === 'chat'
+                            ? 'bg-[#1a73e8] text-white shadow-lg shadow-[#1a73e8]/20'
+                            : 'text-gray-400 hover:text-white hover:bg-white/5'
+                            }`}
+                    >
+                        <MessageSquare className="w-4 h-4" />
+                        Agenda Chat
+                    </button>
+                </div>
+
+                {/* Main Content */}
                 <div className="flex flex-col lg:flex-row gap-6">
-                    {/* Calendário */}
-                    <div className="flex-1">
-                        {loading ? (
-                            <div className="glass rounded-2xl p-6">
-                                <div className="h-8 w-48 skeleton rounded mb-6" />
-                                <div className="grid grid-cols-7 gap-2">
-                                    {Array.from({ length: 35 }).map((_, i) => (
-                                        <div key={i} className="h-20 skeleton rounded" />
-                                    ))}
-                                </div>
-                            </div>
-                        ) : (
+                    {/* Calendar or Chat */}
+                    <div className="flex-1 min-w-0">
+                        {activeTab === 'calendar' ? (
                             <CalendarComponent
                                 meetings={meetings}
                                 onDateSelect={handleDateSelect}
                                 onMeetingClick={handleMeetingClick}
                             />
+                        ) : (
+                            <ChatPanel
+                                organizerName={user?.user_metadata.full_name || 'Usuário'}
+                                onConfirmSchedule={async (parsed) => {
+                                    if (!user) return { status: 'error', message: 'Não autenticado' };
+
+                                    // Build structured payload from parsed data
+                                    const meetingData = {
+                                        title: parsed.title,
+                                        description: parsed.description,
+                                        date: parsed.date,
+                                        start_time: parsed.start_time,
+                                        end_time: parsed.end_time,
+                                        participants: parsed.participants,
+                                        participant_names: parsed.participant_names,
+                                        status: 'scheduled' as const,
+                                    };
+
+                                    // Save to local DB first
+                                    const savedMeeting = await createMeeting(meetingData);
+
+                                    // Send to n8n webhook
+                                    const result = await sendWebhook('create', savedMeeting, user);
+
+                                    if (result.status === 'success') {
+                                        await updateWebhookStatus(savedMeeting.id, true, result.google_event_id, result.meet_link);
+                                        const phrase = getRandomPhrase();
+                                        showToast('success', '✅ Agendado pelo Chat!', { meetLink: result.meet_link, subtitle: phrase });
+                                    }
+
+                                    return result;
+                                }}
+                            />
                         )}
                     </div>
 
-                    {/* Sidebar - Próximas reuniões */}
+                    {/* Sidebar - Upcoming Meetings */}
                     <div className="w-full lg:w-80">
-                        <div className="glass rounded-2xl p-4 sm:p-6">
-                            <h3 className="font-semibold text-white mb-4">Próximos Agendamentos</h3>
-
-                            {loading ? (
-                                <div className="space-y-3">
-                                    {Array.from({ length: 3 }).map((_, i) => (
-                                        <div key={i} className="h-20 skeleton rounded-lg" />
-                                    ))}
-                                </div>
-                            ) : upcomingMeetings.length === 0 ? (
-                                <p className="text-slate-500 text-sm text-center py-8">
-                                    Nenhum agendamento próximo
-                                </p>
+                        <div className="bg-[#141414] border border-white/5 rounded-lg p-5">
+                            <h3 className="font-bold text-white mb-4 flex items-center gap-2">
+                                <Clock className="w-4 h-4 text-[#0071eb]" />
+                                Próximos
+                            </h3>
+                            {upcomingMeetings.length === 0 ? (
+                                <p className="text-gray-500 text-sm text-center py-8">Nenhum agendamento</p>
                             ) : (
                                 <div className="space-y-3">
-                                    {upcomingMeetings.map((meeting) => (
+                                    {upcomingMeetings.map(m => (
                                         <div
-                                            key={meeting.id}
-                                            onClick={() => handleMeetingClick(meeting)}
-                                            className="bg-slate-800/50 rounded-lg p-3 cursor-pointer hover:bg-slate-700/50 transition-colors"
+                                            key={m.id}
+                                            onClick={() => handleMeetingClick(m)}
+                                            className="p-3 rounded-lg bg-[#222] hover:bg-[#333] transition-all cursor-pointer border border-transparent hover:border-[#0071eb]/30"
                                         >
-                                            <p className="font-medium text-white text-sm truncate">{meeting.title}</p>
-                                            <p className="text-xs text-slate-400 mt-1">
-                                                {formatDateBR(new Date(meeting.date + 'T12:00:00'))} às {formatTime(meeting.start_time)}
-                                            </p>
-                                            <div className="flex items-center gap-1 mt-2">
-                                                <Users className="w-3 h-3 text-slate-500" />
-                                                <span className="text-xs text-slate-500">{meeting.participants.length}</span>
-                                                <span
-                                                    className={`ml-auto text-xs px-2 py-0.5 rounded-full ${meeting.status === 'scheduled'
-                                                        ? 'bg-amber-500/20 text-amber-400'
-                                                        : meeting.status === 'completed'
-                                                            ? 'bg-emerald-500/20 text-emerald-400'
-                                                            : 'bg-red-500/20 text-red-400'
-                                                        }`}
-                                                >
-                                                    {meeting.status === 'scheduled'
-                                                        ? 'Agendada'
-                                                        : meeting.status === 'completed'
-                                                            ? 'Concluída'
-                                                            : 'Cancelada'}
+                                            <div className="flex justify-between items-start mb-1">
+                                                <span className="text-sm font-medium text-white truncate max-w-[150px]">{m.title}</span>
+                                                <span className="text-[10px] bg-[#0071eb]/15 text-[#0071eb] px-1.5 py-0.5 rounded">
+                                                    {formatTime(m.start_time)}
                                                 </span>
+                                            </div>
+                                            <div className="flex items-center gap-1.5 text-xs text-gray-500">
+                                                <Calendar className="w-3 h-3" />
+                                                {formatDateBR(new Date(m.date + 'T12:00:00'))}
                                             </div>
                                         </div>
                                     ))}
@@ -360,43 +246,67 @@ export const Dashboard: React.FC = () => {
                 </div>
             </main>
 
-            {/* FAB - Botão de criar reunião */}
-            <div className="fab-container fixed bottom-6 right-6 z-30">
-                <button
-                    onClick={() => {
-                        setEditingMeeting(null);
-                        setPrefilledDate(null);
-                        setPrefilledTime(null);
-                        setShowMeetingModal(true);
-                    }}
-                    className="relative w-14 h-14 bg-amber-500 rounded-full shadow-xl shadow-amber-500/30 flex items-center justify-center hover:bg-amber-400 hover:scale-110 transition-all fab-ring group"
-                >
-                    <Plus className="w-6 h-6 text-slate-900 transition-transform group-hover:rotate-90" />
-                </button>
-                <span className="fab-tooltip">Nova Reunião</span>
-            </div>
+            {/* FAB - Netflix Blue */}
+            <button
+                onClick={() => {
+                    setEditingMeeting(null);
+                    setPrefilledDate(null);
+                    setPrefilledTime(null);
+                    setShowMeetingModal(true);
+                }}
+                className="fixed bottom-6 right-6 w-14 h-14 bg-[#0071eb] hover:bg-[#0056b3] rounded-full shadow-lg shadow-[#0071eb]/30 flex items-center justify-center text-white hover:scale-110 transition-all z-30 focus:outline-none focus:ring-2 focus:ring-[#0071eb]"
+            >
+                <Plus className="w-7 h-7" />
+            </button>
 
-            {/* Modais */}
+            {/* Modals */}
             <MeetingModal
                 isOpen={showMeetingModal}
-                onClose={() => {
-                    setShowMeetingModal(false);
-                    setEditingMeeting(null);
-                }}
+                onClose={() => { setShowMeetingModal(false); setEditingMeeting(null); }}
                 onSave={handleCreateOrUpdate}
                 editMeeting={editingMeeting}
                 prefilledDate={prefilledDate}
                 prefilledTime={prefilledTime}
             />
-
             <MeetingDetailsModal
                 isOpen={showDetailsModal}
                 onClose={() => setShowDetailsModal(false)}
                 meeting={selectedMeeting}
-                onEdit={handleEditMeeting}
-                onCancel={handleCancelMeeting}
-                onDelete={handleDeleteMeeting}
-                onResendWebhook={handleResendWebhook}
+                onEdit={(m) => { setShowDetailsModal(false); setEditingMeeting(m); setShowMeetingModal(true); }}
+                onCancel={async (m) => {
+                    const updated = await updateMeeting(m.id, { status: 'cancelled' });
+                    setShowDetailsModal(false);
+                    if (user && updated.google_event_id) {
+                        const result = await sendWebhook('delete', updated, user);
+                        if (result.status === 'success') {
+                            showToast('success', '🚫 Evento cancelado e removido do Google Calendar');
+                        }
+                    } else {
+                        showToast('warning', 'Evento cancelado localmente');
+                    }
+                }}
+                onDelete={async (m) => {
+                    if (user && m.google_event_id) {
+                        const result = await sendWebhook('delete', m, user);
+                        if (result.status === 'success') {
+                            showToast('success', '🗑️ Evento excluído do Google Calendar');
+                        }
+                    }
+                    await deleteMeeting(m.id);
+                    setShowDetailsModal(false);
+                }}
+                onResendWebhook={async (m) => {
+                    if (user) {
+                        const result = await sendWebhook('create', m, user);
+                        if (result.status === 'success') {
+                            await updateWebhookStatus(m.id, true, result.google_event_id);
+                            const phrase = getRandomPhrase();
+                            showToast('success', '✅ Webhook reenviado!', { meetLink: result.meet_link, subtitle: phrase });
+                        } else {
+                            showToast('error', 'Erro ao reenviar webhook');
+                        }
+                    }
+                }}
             />
         </div>
     );

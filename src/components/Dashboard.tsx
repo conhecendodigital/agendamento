@@ -447,13 +447,23 @@ export const Dashboard: React.FC = () => {
                     if (user) {
                         const result = await sendWebhook('create', m, user);
                         if (result.status === 'success') {
-                            await updateWebhookStatus(m.id, true, result.google_event_id);
+                            await updateWebhookStatus(m.id, true, result.google_event_id, result.meet_link);
                             const phrase = getRandomPhrase();
                             showToast('success', '✅ Webhook reenviado!', { meetLink: result.meet_link, subtitle: phrase });
                         } else {
                             showToast('error', 'Erro ao reenviar webhook');
                         }
                     }
+                }}
+                onComplete={async (m) => {
+                    await updateMeeting(m.id, { status: 'completed' });
+                    setShowDetailsModal(false);
+                    showToast('success', '✅ Reunião concluída!');
+                }}
+                onPostpone={(m) => {
+                    setShowDetailsModal(false);
+                    setEditingMeeting(m);
+                    setShowMeetingModal(true);
                 }}
             />
         </div>

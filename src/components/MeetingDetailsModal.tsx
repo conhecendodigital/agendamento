@@ -1,5 +1,5 @@
 import React from 'react';
-import { X, Edit, Trash2, XCircle, Calendar, Clock, RefreshCw, CheckCircle, AlertCircle, Video } from 'lucide-react';
+import { X, Edit, Trash2, XCircle, Calendar, Clock, RefreshCw, CheckCircle, AlertCircle, Video, CalendarClock } from 'lucide-react';
 import type { Meeting } from '../hooks/useMeetings';
 import { formatDateFull, formatTime } from '../utils/dateUtils';
 import { getRandomPhrase } from '../utils/motivationalPhrases';
@@ -12,6 +12,8 @@ interface MeetingDetailsModalProps {
     onCancel: (meeting: Meeting) => void;
     onDelete: (meeting: Meeting) => void;
     onResendWebhook: (meeting: Meeting) => void;
+    onComplete: (meeting: Meeting) => void;
+    onPostpone: (meeting: Meeting) => void;
 }
 
 export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
@@ -21,7 +23,9 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
     onEdit,
     onCancel,
     onDelete,
-    onResendWebhook
+    onResendWebhook,
+    onComplete,
+    onPostpone
 }) => {
     if (!isOpen || !meeting) return null;
 
@@ -127,27 +131,27 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
                         </div>
                     </div>
 
-                    {/* Meet Link & Motivational */}
-                    {meeting.webhook_sent ? (
-                        <div className="space-y-3">
-                            {meeting.meet_link && (
-                                <a
-                                    href={meeting.meet_link}
-                                    target="_blank"
-                                    rel="noopener noreferrer"
-                                    className="flex items-center gap-3 bg-[#0071eb]/10 hover:bg-[#0071eb]/20 border border-[#0071eb]/30 rounded-lg px-4 py-3 transition-all group"
-                                >
-                                    <Video className="w-5 h-5 text-[#0071eb] group-hover:text-white transition-colors flex-shrink-0" />
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-[#0071eb] group-hover:text-white transition-colors">Entrar na Reunião</p>
-                                        <p className="text-xs text-gray-500 truncate">{meeting.meet_link}</p>
-                                    </div>
-                                </a>
-                            )}
-                            <div className="flex items-center gap-3 bg-[#222] border border-white/5 rounded-lg px-4 py-3">
-                                <CheckCircle className="w-5 h-5 text-[#46d369] flex-shrink-0" />
-                                <p className="text-gray-400 text-sm italic">{getRandomPhrase()}</p>
+                    {/* Meet Link */}
+                    {meeting.meet_link && (
+                        <a
+                            href={meeting.meet_link}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="flex items-center gap-3 bg-[#0071eb]/10 hover:bg-[#0071eb]/20 border border-[#0071eb]/30 rounded-lg px-4 py-3 transition-all group"
+                        >
+                            <Video className="w-5 h-5 text-[#0071eb] group-hover:text-white transition-colors flex-shrink-0" />
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-medium text-[#0071eb] group-hover:text-white transition-colors">Entrar na Reunião</p>
+                                <p className="text-xs text-gray-500 truncate">{meeting.meet_link}</p>
                             </div>
+                        </a>
+                    )}
+
+                    {/* Sync Status & Motivational */}
+                    {meeting.webhook_sent ? (
+                        <div className="flex items-center gap-3 bg-[#222] border border-white/5 rounded-lg px-4 py-3">
+                            <CheckCircle className="w-5 h-5 text-[#46d369] flex-shrink-0" />
+                            <p className="text-gray-400 text-sm italic">{getRandomPhrase()}</p>
                         </div>
                     ) : (
                         <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 bg-[#222] border border-white/5 rounded-lg p-4">
@@ -167,6 +171,22 @@ export const MeetingDetailsModal: React.FC<MeetingDetailsModalProps> = ({
 
                 {/* Action Buttons */}
                 <div className="flex flex-wrap gap-2 p-4 sm:p-5 pt-0 pb-safe">
+                    {meeting.status === 'scheduled' && (
+                        <>
+                            <button
+                                onClick={() => onComplete(meeting)}
+                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 bg-[#46d369]/20 text-[#46d369] border border-[#46d369]/30 rounded-lg hover:bg-[#46d369]/30 active:bg-[#46d369]/40 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#46d369]"
+                            >
+                                <CheckCircle className="w-4 h-4" />Concluída
+                            </button>
+                            <button
+                                onClick={() => { onClose(); onPostpone(meeting); }}
+                                className="flex-1 min-w-[100px] flex items-center justify-center gap-2 py-3 sm:py-2.5 px-4 bg-[#f5a623]/20 text-[#f5a623] border border-[#f5a623]/30 rounded-lg hover:bg-[#f5a623]/30 active:bg-[#f5a623]/40 transition-all text-sm focus:outline-none focus:ring-2 focus:ring-[#f5a623]"
+                            >
+                                <CalendarClock className="w-4 h-4" />Adiado
+                            </button>
+                        </>
+                    )}
                     {meeting.status !== 'cancelled' && (
                         <>
                             <button

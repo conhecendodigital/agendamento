@@ -448,6 +448,13 @@ export const Dashboard: React.FC = () => {
                         const result = await sendWebhook('create', m, user);
                         if (result.status === 'success') {
                             await updateWebhookStatus(m.id, true, result.google_event_id, result.meet_link);
+                            // Update selectedMeeting so modal reflects meet_link immediately
+                            setSelectedMeeting(prev => prev && prev.id === m.id ? {
+                                ...prev,
+                                webhook_sent: true,
+                                google_event_id: result.google_event_id,
+                                meet_link: result.meet_link,
+                            } : prev);
                             const phrase = getRandomPhrase();
                             showToast('success', '✅ Webhook reenviado!', { meetLink: result.meet_link, subtitle: phrase });
                         } else {
